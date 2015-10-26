@@ -5,15 +5,65 @@
 #include <netinet/in.h>
 #include <netinet/ip.h>
 #include <strings.h>
+#include "list.h"
 
-#define  BUFFERSIZE 65536
-#define  PORTNO     7000
+#define LINEBUFSIZE 16384
+#define CMDBUFSIZE 512
+const char * welcome_msg =
+    "****************************************\n"
+    "** Welcome to the information server. **\n"
+    "****************************************\n";
+
+char *
+read_message(int socket)
+{
+    char buffer[LINEBUFSIZE];
+    char * result;
+    int i = 0;
+    ssize_t recv_result = recv(socket, buffer, LINEBUFSIZE, 0);
+    if (recv_result < 0) {
+        perror("recv error");
+        result = (char *)malloc(1);
+        result[0] = 0;
+    } else {
+        // remove /r/n and append /0
+        buffer[recv_result - 2] = 0;
+        result = (char *)malloc(recv_result - 1);
+        strcpy(result, buffer);
+    }
+    return result;
+}
+
+void
+send_message(int socket, char * message)
+{
+    int send_result = send(socket, message, strlen(message), 0);
+    if (send_result < 0) {
+        perror("sending message");
+    }
+}
+
+void
+child(int socket)
+{
+    send_message(socket, (char *)welcome_msg);
+
+    while (1) {
+        send_message(socket, "% ");
+        char * message = read_message(socket);
+        if (strcmp("exit", message) == 0) {
+            free(message);
+            break;
+        } else {
+            printf("%s\n", message);
+        }
+    }
+}
 
 
 void
-create_server(int port_number, void (*callback)(void))
+create_server(int port_number, void (*callback)(int))
 {
-
     struct sockaddr_in server_address;
     struct sockaddr_in client_address;
 
@@ -21,13 +71,18 @@ create_server(int port_number, void (*callback)(void))
     bzero((char *) &server_address, sizeof(server_address));
     server_address.sin_family = AF_INET;
     server_address.sin_addr.s_addr = INADDR_ANY;
-    server_address.sin_port = htons(PORTNO);
+    server_address.sin_port = htons(port_number);
 
     // opening socket
     int socket_fd = socket(PF_INET, SOCK_STREAM, 0);
     if (socket_fd < 0) {
         perror("opening stream socket");
     }
+
+    // configure socket to SO_REUSEADDR
+    int true = 1;
+    setsockopt(socket_fd, SOL_SOCKET, SO_REUSEADDR, &true, sizeof(int));
+
 
     // binding socket
     int bind_result = bind(socket_fd, (struct sockaddr *) &server_address, sizeof(server_address));
@@ -41,8 +96,8 @@ create_server(int port_number, void (*callback)(void))
         perror("listening socket");
     }
 
-    // accepting
-    while (1) {
+    // non-stop accepting
+    // while (1) {
 
         socklen_t client_length = sizeof(client_address);
         int client_socket_fd = accept(socket_fd, (struct sockaddr *) &client_address, &client_length);
@@ -50,114 +105,37 @@ create_server(int port_number, void (*callback)(void))
             perror("accepting socket");
         }
 
+
         // forking child processes
-        int child_pid = fork();
+        pid_t child_pid = fork();
         if (child_pid < 0) {
             perror("fork error");
         } else if (child_pid == 0) {    //  child process
             close(socket_fd);
-            callback();
+            callback(client_socket_fd);
             exit(EXIT_SUCCESS);
         } else {                        //  parent process
-            // prevent deamon from accessing imcoming sockets
             close(client_socket_fd);
         }
+    // }
 
-    }
+    close(socket_fd);
 }
 
-void
-child()
-{
-    printf("haha\n");
-}
+
 
 int
 main(int argc, char *argv[])
 {
-    create_server(7000, child);
-    // struct sockaddr_in server_address;
-    // struct sockaddr_in client_address;
-    //
-    // // initialize server address
-    // bzero((char *) &server_address, sizeof(server_address));
-    // server_address.sin_family = AF_INET;
-    // server_address.sin_addr.s_addr = INADDR_ANY;
-    // server_address.sin_port = htons(PORTNO);
-    //
-    // // opening socket
-    // int socket_fd = socket(PF_INET, SOCK_STREAM, 0);
-    // if (socket_fd < 0) {
-    //     perror("opening stream socket");
-    // } else {
-    //     printf("socket fd: %d\n", socket_fd);
-    // }
-    //
-    // // binding socket
-    // int bind_result = bind(socket_fd, (struct sockaddr *) &server_address, sizeof(server_address));
-    // if (bind_result < 0) {
-    //     perror("binding socket");
-    // }
-    //
-    // // listening socket
-    // int listen_result = listen(socket_fd, 0);
-    // if (listen_result < 0) {
-    //     perror("listening socket");
-    // }
-    //
-    // // accepting
-    // socklen_t client_length;
-    //
-    // while (1) {
-    //     client_length = sizeof(client_address);
-    //     int new_socket_fd = accept(socket_fd, (struct sockaddr *) &client_address, &client_length);
-    //     if (new_socket_fd < 0) {
-    //         perror("accepting socket");
-    //     } else {
-    //         printf("new socket fd: %d\n", new_socket_fd);
-    //     }
-    //
-    //     int child_pid = fork();
-    //     char buffer[BUFFERSIZE];
-    //     ssize_t recv_result;
-    //     if (child_pid < 0) {
-    //         perror("fork error");
-    //     } else if (child_pid == 0) {    //  child process
-    //         printf("incoming %d\n", child_pid);
-    //
-    //         // while (1) {
-    //         //     recv_result = recv(new_socket_fd, buffer, sizeof(buffer), 0);
-    //         //     printf("recv_result %zd\n", recv_result);
-    //         //     if (recv_result == 0) {
-    //         //         printf("closing new socket\n");
-    //         //         close(new_socket_fd);
-    //         //     } else if (recv_result < 0) {
-    //         //         perror("recv error");
-    //         //     } else {
-    //         //
-    //         //         // print to STDOUT
-    //         //         // getline
-    //         //         // int i = 0;
-    //         //         // while (i != recv_result) {
-    //         //         //     putchar(buffer[i]);
-    //         //         //     i++;
-    //         //         // }
-    //         //
-    //         //         // send back
-    //         //         send(new_socket_fd, buffer, recv_result, 0);
-    //         //     }
-    //         // }
-    //
-    //         close(socket_fd);
-    //
-    //         exit(1);
-    //     }
-    //
-    //     close(new_socket_fd);
-    //     printf("out %d\n", child_pid);
-    //
-    // }
+    // create_server(7000, child);
 
+    int a = 1;
+
+    List * list = cons(&a, sizeof(int), cons(&a, sizeof(int), cons(&a, sizeof(int), nil())));
+
+    print_list(list);
+
+    free_list(list);
 
 
     return 0;
