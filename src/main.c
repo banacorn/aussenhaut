@@ -5,7 +5,7 @@
 #include <netinet/in.h>
 #include <netinet/ip.h>
 #include <strings.h>
-#include "list.h"
+#include "ds.h"
 
 #define LINEBUFSIZE 16384
 #define CMDBUFSIZE 512
@@ -14,54 +14,25 @@ const char * welcome_msg =
     "** Welcome to the information server. **\n"
     "****************************************\n";
 
-typedef char * String;
-typedef struct Command {
-    String  name;
-    List *  args;
-} Command;
+// typedef struct Line {
+//     List *  commands;
+//     int     pipeTo;
+// } Line;
+//
+// Line * alloc_line(List * commands, int pipeTo)
+// {
+//     Line * line = malloc(sizeof(Line));
+//     line -> commands = copy_list(commands);
+//     line -> pipeTo = pipeTo;
+//     return line;
+// }
+//
+// void free_line(Line * line)
+// {
+//     free_list(line -> commands);
+//     free(line);
+// }
 
-Command * alloc_command(String name, List * args)
-{
-    Command * command = malloc(sizeof(Command));
-    command -> name = malloc(strlen(name) + 1);
-    strcpy(command -> name, name);
-    command -> args = copy_list(args);
-    return command;
-}
-
-void free_command(Command * command)
-{
-    free(command -> name);
-    free_list(command -> args);
-    free(command);
-}
-
-typedef struct Line {
-    List *  commands;
-    int     pipeTo;
-} Line;
-
-Line * alloc_line(List * commands, int pipeTo)
-{
-    Line * line = malloc(sizeof(Line));
-    line -> commands = copy_list(commands);
-    line -> pipeTo = pipeTo;
-    return line;
-}
-
-void free_line(Line * line)
-{
-    free_list(line -> commands);
-    free(line);
-}
-
-
-void parseCommand(String str)
-{
-    // char
-    // String result = strtok(str, " ");
-    printf("%s\n", "result");
-}
 
 
 
@@ -174,15 +145,7 @@ void create_server(int port_number, void (*callback)(int))
 int main(int argc, char *argv[])
 {
     // create_server(7000, child);
-    // parseCommand("haha hehe yo");
-
-    List * args = cons("0", 2, cons("1", 2, nil()));
-    Command * c = alloc_command("hey", args);
-    List * commands = cons(c, sizeof(c), nil());
-    Line * l = alloc_line(commands, 0);
-    free_line(l);
-    free_list(commands);
-    free_list(args);
+    Command * c = parse_command(string("haha hehe yo"));
     free_command(c);
 
     return 0;
