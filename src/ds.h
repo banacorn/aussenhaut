@@ -23,12 +23,17 @@ Data * copy_data(Data * node);
 //  String
 ////////////////////////////////////////////////////////////////////////////////
 
-typedef char * String;
+// typedef char * String;
 
-String string(String str);
-String copy_string(String str);
-size_t string_size(String str);
-void free_string(String str);
+typedef struct String {
+    char * content;
+} String;
+
+String * string(char * chars);
+String * string_n(char * chars, size_t n);
+String * copy_string(String * str);
+size_t string_size(String * str);
+void free_string(String * str);
 
 ////////////////////////////////////////////////////////////////////////////////
 //  List
@@ -60,12 +65,12 @@ void print_list(List * xs);
 ////////////////////////////////////////////////////////////////////////////////
 
 typedef struct Command {
-    String  name;
-    List *  args;
+    String *    name;
+    List *      args;
 } Command;
 
-Command * command(String name, List * args);
-Command * parse_command(String str);
+Command * command(String * name, List * args);
+Command * parse_command(String * str);
 void free_command(Command * node);
 void print_command(Command * node);
 

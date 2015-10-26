@@ -37,25 +37,34 @@ Data * copy_data(Data * old_node)
 //  String
 ////////////////////////////////////////////////////////////////////////////////
 
-String string(String str)
+String * string(char * chars)
 {
-    String new_str = malloc(strlen(str) + 1);
-    strcpy(new_str, str);
+    String * new_str = malloc(sizeof(String));
+    new_str -> content = malloc(strlen(chars) + 1);
+    strcpy(new_str -> content, chars);
     return new_str;
 }
 
-String copy_string(String str)
+// String * string_n(char * chars, size_t n)
+// {
+//     String * new_str = malloc(n);
+//     strncpy(new_str -> content, chars, n);
+//     return new_str;
+// }
+
+String * copy_string(String * str)
 {
-    return string(str);
+    return string(str -> content);
 }
 
-size_t string_size(String str)
+size_t string_size(String * str)
 {
-    return strlen(str) + 1;
+    return strlen(str -> content) + 1;
 }
 
-void free_string(String str)
+void free_string(String * str)
 {
+    free(str -> content);
     free(str);
 }
 
@@ -116,7 +125,7 @@ void print_list(List * xs)
 //  Command
 ////////////////////////////////////////////////////////////////////////////////
 
-Command * command(String name, List * args)
+Command * command(String * name, List * args)
 {
     Command * node = malloc(sizeof(Command));
     node -> name = name;
@@ -131,21 +140,20 @@ void free_command(Command * node)
     free(node);
 }
 
-Command * parse_command(String str)
+Command * parse_command(String * str)
 {
     Command * node = malloc(sizeof(Command));
     // name
-    String p = strtok(str," ");
-    node -> name = copy_string(p);
-
+    char * p = strtok(str -> content," ");
+    node -> name = string(p);
     // args
     node -> args = nil();
     while (p = strtok(NULL, " "), p != NULL) {
-        String arg = copy_string(p);
-        node -> args = cons(data(arg, string_size(arg)), node -> args);
+        String * arg = string(p);
+        Data * d = data(arg, sizeof(arg));
+        node -> args = cons(d, node -> args);
     }
-
-    free(str);
+    free_string(str);
     return node;
 }
 

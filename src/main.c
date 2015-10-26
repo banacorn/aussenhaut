@@ -36,7 +36,7 @@ const char * welcome_msg =
 
 
 
-String read_message(int socket)
+char * read_message(int socket)
 {
     char buffer[LINEBUFSIZE];
     char * result;
@@ -55,7 +55,7 @@ String read_message(int socket)
     return result;
 }
 
-void send_message(int socket, String message)
+void send_message(int socket, char * message)
 {
     int send_result = send(socket, message, strlen(message), 0);
     if (send_result < 0) {
@@ -65,11 +65,11 @@ void send_message(int socket, String message)
 
 void child(int socket)
 {
-    send_message(socket, (String)welcome_msg);
+    send_message(socket, (char *)welcome_msg);
 
     while (1) {
         send_message(socket, "% ");
-        String message = read_message(socket);
+        char * message = read_message(socket);
         if (strcmp("exit", message) == 0) {
             free(message);
             break;
@@ -86,7 +86,7 @@ void create_server(int port_number, void (*callback)(int))
     struct sockaddr_in client_address;
 
     // initialize server address
-    bzero((String) &server_address, sizeof(server_address));
+    bzero((char *) &server_address, sizeof(server_address));
     server_address.sin_family = AF_INET;
     server_address.sin_addr.s_addr = INADDR_ANY;
     server_address.sin_port = htons(port_number);
@@ -145,8 +145,18 @@ void create_server(int port_number, void (*callback)(int))
 int main(int argc, char *argv[])
 {
     // create_server(7000, child);
-    Command * c = parse_command(string("haha hehe yo"));
-    free_command(c);
+    // Command * c = parse_command(string("haha gasd hehe yo"));
+    // free_command(c);
+
+
+    String * a = string("AAA");
+    // String * b = string("BB");
+    Data * d = data(a, sizeof(a));
+    // Data * e = data(b, sizeof(b));
+    // List * list = cons(data(a, sizeof(a)), cons(data(b, sizeof(b)), nil()));
+    // free_list(list);
+    free_data(d);
+    // free_data(e);
 
     return 0;
 }
