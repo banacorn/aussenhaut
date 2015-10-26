@@ -2,12 +2,13 @@ CFLAGS=-Wall -g
 
 go:
 	@ make clean
-	@ cc -o dist/main src/main.c  src/list.c
-	@ ./dist/main
+	@ mkdir -p build
+	@ cc -o build/main src/main.c  src/list.c
+	@ ./build/main
 
 check:
 	@ make go
-	@ valgrind ./dist/main
+	@ valgrind ./build/main
 
 clean:
 	@ rm -f main
