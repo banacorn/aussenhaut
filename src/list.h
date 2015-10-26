@@ -12,13 +12,19 @@ typedef struct List {
     // Cons
     struct List *   cons;
     void *          data;
+    size_t          data_size;
 } List;
 
 // smart constructors
 List * nil();
 List * cons(void * data, size_t data_size, List * xs);
+
 // deconstructor
 void free_list(List * xs);
+
+// copy
+List * copy_list(List * xs);
+
 // print
 void print_list(List * xs);
 

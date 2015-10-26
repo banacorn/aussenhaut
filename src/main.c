@@ -14,8 +14,58 @@ const char * welcome_msg =
     "** Welcome to the information server. **\n"
     "****************************************\n";
 
-char *
-read_message(int socket)
+typedef char * String;
+typedef struct Command {
+    String  name;
+    List *  args;
+} Command;
+
+Command * alloc_command(String name, List * args)
+{
+    Command * command = malloc(sizeof(Command));
+    command -> name = malloc(strlen(name) + 1);
+    strcpy(command -> name, name);
+    command -> args = copy_list(args);
+    return command;
+}
+
+void free_command(Command * command)
+{
+    free(command -> name);
+    free_list(command -> args);
+    free(command);
+}
+
+typedef struct Line {
+    List *  commands;
+    int     pipeTo;
+} Line;
+
+Line * alloc_line(List * commands, int pipeTo)
+{
+    Line * line = malloc(sizeof(Line));
+    line -> commands = copy_list(commands);
+    line -> pipeTo = pipeTo;
+    return line;
+}
+
+void free_line(Line * line)
+{
+    free_list(line -> commands);
+    free(line);
+}
+
+
+void parseCommand(String str)
+{
+    // char
+    // String result = strtok(str, " ");
+    printf("%s\n", "result");
+}
+
+
+
+String read_message(int socket)
 {
     char buffer[LINEBUFSIZE];
     char * result;
@@ -34,8 +84,7 @@ read_message(int socket)
     return result;
 }
 
-void
-send_message(int socket, char * message)
+void send_message(int socket, String message)
 {
     int send_result = send(socket, message, strlen(message), 0);
     if (send_result < 0) {
@@ -43,14 +92,13 @@ send_message(int socket, char * message)
     }
 }
 
-void
-child(int socket)
+void child(int socket)
 {
-    send_message(socket, (char *)welcome_msg);
+    send_message(socket, (String)welcome_msg);
 
     while (1) {
         send_message(socket, "% ");
-        char * message = read_message(socket);
+        String message = read_message(socket);
         if (strcmp("exit", message) == 0) {
             free(message);
             break;
@@ -61,14 +109,13 @@ child(int socket)
 }
 
 
-void
-create_server(int port_number, void (*callback)(int))
+void create_server(int port_number, void (*callback)(int))
 {
     struct sockaddr_in server_address;
     struct sockaddr_in client_address;
 
     // initialize server address
-    bzero((char *) &server_address, sizeof(server_address));
+    bzero((String) &server_address, sizeof(server_address));
     server_address.sin_family = AF_INET;
     server_address.sin_addr.s_addr = INADDR_ANY;
     server_address.sin_port = htons(port_number);
@@ -124,19 +171,19 @@ create_server(int port_number, void (*callback)(int))
 
 
 
-int
-main(int argc, char *argv[])
+int main(int argc, char *argv[])
 {
     // create_server(7000, child);
+    // parseCommand("haha hehe yo");
 
-    int a = 1;
-
-    List * list = cons(&a, sizeof(int), cons(&a, sizeof(int), cons(&a, sizeof(int), nil())));
-
-    print_list(list);
-
-    free_list(list);
-
+    List * args = cons("0", 2, cons("1", 2, nil()));
+    Command * c = alloc_command("hey", args);
+    List * commands = cons(c, sizeof(c), nil());
+    Line * l = alloc_line(commands, 0);
+    free_line(l);
+    free_list(commands);
+    free_list(args);
+    free_command(c);
 
     return 0;
 }
