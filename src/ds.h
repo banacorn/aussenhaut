@@ -7,23 +7,8 @@
 #include <string.h>
 
 ////////////////////////////////////////////////////////////////////////////////
-//  Generic Data
-////////////////////////////////////////////////////////////////////////////////
-
-typedef struct Data {
-    void * content;
-    size_t size;
-} Data;
-
-Data * data(void * content, size_t size);
-void free_data(Data * node);
-Data * copy_data(Data * node);
-
-////////////////////////////////////////////////////////////////////////////////
 //  String
 ////////////////////////////////////////////////////////////////////////////////
-
-// typedef char * String;
 
 typedef struct String {
     char * content;
@@ -36,40 +21,37 @@ size_t string_size(String * str);
 void free_string(String * str);
 
 ////////////////////////////////////////////////////////////////////////////////
-//  List
+//  List of Strings
 ////////////////////////////////////////////////////////////////////////////////
 
-typedef struct List {
+typedef struct ListStr {
     // Nil
-    int             nil;
+    int              nil;
     // Cons
-    struct List *   cons;
-    Data *          data;
-} List;
+    struct ListStr * cons;
+    String *         data;
+} ListStr;
 
 // smart constructors
-List * nil();
-List * cons(Data * data, List * xs);
-
-// deconstructor
-void free_list(List * xs);
-
-// copy
-List * copy_list(List * xs);
-
-// print
-void print_list(List * xs);
+ListStr * nil_str();
+ListStr * cons_str(String * data, ListStr * xs);
+ListStr * snoc_str(ListStr * xs, String * data);
+ListStr * copy_list_str(ListStr * xs);
+ListStr * append_str(ListStr * xs, ListStr * ys);
+ListStr * reverse_str(ListStr * xs);
+void print_list_str(ListStr * xs);
+void free_list_str(ListStr * xs);
 
 ////////////////////////////////////////////////////////////////////////////////
 //  Command
 ////////////////////////////////////////////////////////////////////////////////
 
 typedef struct Command {
-    String *    name;
-    List *      args;
+    String *  name;
+    ListStr * args;
 } Command;
 
-Command * command(String * name, List * args);
+Command * command(String * name, ListStr * args);
 Command * parse_command(String * str);
 void free_command(Command * node);
 void print_command(Command * node);

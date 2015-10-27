@@ -145,18 +145,16 @@ void create_server(int port_number, void (*callback)(int))
 int main(int argc, char *argv[])
 {
     // create_server(7000, child);
-    // Command * c = parse_command(string("haha gasd hehe yo"));
-    // free_command(c);
+    Command * c = parse_command(string("haha gasd hehe yo"));
+    print_command(c);
+    free_command(c);
 
-
-    String * a = string("AAA");
-    // String * b = string("BB");
-    Data * d = data(a, sizeof(a));
-    // Data * e = data(b, sizeof(b));
-    // List * list = cons(data(a, sizeof(a)), cons(data(b, sizeof(b)), nil()));
-    // free_list(list);
-    free_data(d);
-    // free_data(e);
-
+    // ListStr * ls = nil_str();
+    // ListStr * ls = cons_str(string("hey"), cons_str(string("haha"), nil_str()));
+    // ListStr * ms = reverse_str(ls);
+    // // ListStr * ms = cons_str(string("hey"), cons_str(string("haha"), nil_str()));
+    // ListStr * hey = append_str(ls, ms);
+    // print_list_str(ms);
+    // free_list_str(ms);
     return 0;
 }

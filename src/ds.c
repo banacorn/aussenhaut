@@ -1,39 +1,6 @@
 #include "ds.h"
 
 ////////////////////////////////////////////////////////////////////////////////
-//  Generic Data
-////////////////////////////////////////////////////////////////////////////////
-
-Data * data(void * content, size_t size)
-{
-    Data * node = malloc(sizeof(Data));
-    node -> content = content;
-    node -> size = size;
-    return node;
-}
-
-void free_data(Data * node)
-{
-    free(node -> content);
-    free(node);
-}
-
-Data * copy_data(Data * old_node)
-{
-    Data * new_node = malloc(sizeof(Data));
-
-    // copy content
-    void * new_content = malloc(old_node -> size);
-    memcpy(new_content, old_node -> content, old_node -> size);
-
-    // initialize
-    new_node -> content = new_content;
-    new_node -> size = old_node -> size;
-
-    return new_node;
-}
-
-////////////////////////////////////////////////////////////////////////////////
 //  String
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -44,13 +11,6 @@ String * string(char * chars)
     strcpy(new_str -> content, chars);
     return new_str;
 }
-
-// String * string_n(char * chars, size_t n)
-// {
-//     String * new_str = malloc(n);
-//     strncpy(new_str -> content, chars, n);
-//     return new_str;
-// }
 
 String * copy_string(String * str)
 {
@@ -69,63 +29,102 @@ void free_string(String * str)
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-//  List
+//  List of Strings
 ////////////////////////////////////////////////////////////////////////////////
 
-List * nil()
+ListStr * nil_str()
 {
-    List * node = malloc(sizeof(List));
+    ListStr * node = malloc(sizeof(ListStr));
     node -> nil = 1;
     node -> cons = NULL;
     node -> data = NULL;
     return node;
 }
 
-List * cons(Data * content, List * xs)
+ListStr * cons_str(String * data, ListStr * xs)
 {
-    List * node = malloc(sizeof(List));
+    ListStr * node = malloc(sizeof(ListStr));
     node -> nil = 0;
     node -> cons = xs;
-    node -> data = content;
+    node -> data = data;
     return node;
 }
 
-void free_list(List * xs)
+// O(n)
+ListStr * snoc_str(ListStr * xs, String * data)
+{
+    if (xs -> nil) {
+        return cons_str(data, xs);
+    } else {
+        ListStr * result = cons_str(xs -> data, snoc_str(xs -> cons, data));
+        free(xs);
+        return result;
+    }
+}
+
+ListStr * append_str(ListStr * xs, ListStr * ys)
+{
+    if (xs -> nil) {
+        free(xs);
+        return ys;
+    } else {
+        ListStr * result = cons_str(xs -> data, append_str(xs -> cons, ys));
+        free(xs);
+        return result;
+    }
+}
+
+
+// O(n ^ 2), bad
+ListStr * reverse_str(ListStr * xs)
+{
+    if (xs -> nil) {
+        return xs;
+    } else {
+        ListStr * result = snoc_str(reverse_str(xs -> cons), xs -> data);
+        free(xs);
+        return result;
+    }
+}
+
+void free_list_str(ListStr * xs)
 {
     if (xs -> nil) {
         free(xs);
     } else {
-        free_list(xs -> cons);
-        free_data(xs -> data);
+        free_list_str(xs -> cons);
+        free_string(xs -> data);
         free(xs);
     }
 }
 
-List * copy_list(List * xs)
+ListStr * copy_list_str(ListStr * xs)
 {
     if (xs -> nil) {
-        return nil();
+        return nil_str();
     } else {
-        List * new_xs = copy_list(xs -> cons);
-        Data * new_data = copy_data(xs -> data);
-        return cons(new_data, new_xs);
+        ListStr * new_xs = copy_list_str(xs -> cons);
+        String * new_data = copy_string(xs -> data);
+        return cons_str(new_data, new_xs);
     }
 }
 
-void print_list(List * xs)
+void print_list_str(ListStr * xs)
 {
     if (xs -> nil) {
         printf("\n");
     } else {
-        print_list(xs -> cons);
+        printf("%s ", xs -> data -> content);
+        print_list_str(xs -> cons);
     }
 }
+
 
 ////////////////////////////////////////////////////////////////////////////////
 //  Command
 ////////////////////////////////////////////////////////////////////////////////
 
-Command * command(String * name, List * args)
+Command * command(String * name, ListStr * args)
 {
     Command * node = malloc(sizeof(Command));
     node -> name = name;
@@ -136,7 +135,7 @@ Command * command(String * name, List * args)
 void free_command(Command * node)
 {
     free_string(node -> name);
-    free_list(node -> args);
+    free_list_str(node -> args);
     free(node);
 }
 
@@ -147,11 +146,9 @@ Command * parse_command(String * str)
     char * p = strtok(str -> content," ");
     node -> name = string(p);
     // args
-    node -> args = nil();
+    node -> args = nil_str();
     while (p = strtok(NULL, " "), p != NULL) {
-        String * arg = string(p);
-        Data * d = data(arg, sizeof(arg));
-        node -> args = cons(d, node -> args);
+        node -> args = snoc_str(node -> args, string(p));
     }
     free_string(str);
     return node;
@@ -159,5 +156,6 @@ Command * parse_command(String * str)
 
 void print_command(Command * node)
 {
-
+    printf("%s ", node -> name -> content);
+    print_list_str(node -> args);
 }
