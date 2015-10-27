@@ -145,9 +145,20 @@ void create_server(int port_number, void (*callback)(int))
 int main(int argc, char *argv[])
 {
     // create_server(7000, child);
-    Command * c = parse_command(string("haha gasd hehe yo"));
-    print_command(c);
-    free_command(c);
+    // Command * c = parse_command(string("haha gasd hehe yo"));
+    // print_command(c);
+    // free_command(c);
+    //
+    // String * s = string("aa bb cc");
+    // String * sub = substring(s, 0, 8);
+    // print_string(sub);
+    // free_string(s);
+    // free_string(sub);
+
+
+    Line * c = parse_line(string("haha gasd hehe yo | yes |2 3"));
+    print_line(c);
+    free_line(c);
 
     // ListStr * ls = nil_str();
     // ListStr * ls = cons_str(string("hey"), cons_str(string("haha"), nil_str()));
