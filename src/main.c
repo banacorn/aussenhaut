@@ -48,15 +48,17 @@ void child(int socket)
     while (1) {
         send_message(socket, "% ");
         char * message = read_message(socket);
-        if (strcmp("exit", message) == 0) {
-            free(message);
+        Line * line = parse_line(string(message));
+        print_line(line);
+
+        if (strcmp("exit", line -> cmds -> data -> name -> content) == 0) {
+            free_line(line);
             break;
         } else {
-            printf("%s\n", message);
+            free_line(line);
         }
     }
 }
-
 
 void create_server(int port_number, void (*callback)(int))
 {
@@ -93,7 +95,7 @@ void create_server(int port_number, void (*callback)(int))
     }
 
     // non-stop accepting
-    // while (1) {
+    while (1) {
 
         socklen_t client_length = sizeof(client_address);
         int client_socket_fd = accept(socket_fd, (struct sockaddr *) &client_address, &client_length);
@@ -113,7 +115,7 @@ void create_server(int port_number, void (*callback)(int))
         } else {                        //  parent process
             close(client_socket_fd);
         }
-    // }
+    }
 
     close(socket_fd);
 }
@@ -123,27 +125,9 @@ void create_server(int port_number, void (*callback)(int))
 int main(int argc, char *argv[])
 {
     // create_server(7000, child);
-    // Command * c = parse_command(string("haha gasd hehe yo"));
-    // print_command(c);
-    // free_command(c);
 
-    // String * s = trim(string("   aa bb cc   "));
-    // String * sub = substring(s, 0, 8);
-    // print_string(s);
-    // free_string(s);
-    // free_string(sub);
-
-
-    Line * c = parse_line(string("fuck ha nope | you wasdf sdfsdf | sdfs !21 |132"));
-    print_line(c);
-    free_line(c);
-
-    // ListStr * ls = nil_str();
-    // ListStr * ls = cons_str(string("hey"), cons_str(string("haha"), nil_str()));
-    // ListStr * ms = reverse_str(ls);
-    // // ListStr * ms = cons_str(string("hey"), cons_str(string("haha"), nil_str()));
-    // ListStr * hey = append_str(ls, ms);
-    // print_list_str(ms);
-    // free_list_str(ms);
+    Line * l = parse_line(string(""));
+    print_line(l);
+    free_line(l);
     return 0;
 }

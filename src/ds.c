@@ -74,7 +74,7 @@ size_t string_size(String * str)
     return strlen(str -> content) + 1;
 }
 
-Bool null(String * str)
+Bool null_string(String * str)
 {
     if (strlen(str -> content) == 0)
         return TRUE;
@@ -282,17 +282,22 @@ void free_command(Command * node)
 
 Command * parse_command(String * str)
 {
-    Command * node = malloc(sizeof(Command));
-    // name
-    char * p = strtok(str -> content," ");
-    node -> name = string(p);
-    // args
-    node -> args = nil_str();
-    while (p = strtok(NULL, " "), p != NULL) {
-        node -> args = snoc_str(node -> args, string(p));
+    String * name;
+    ListStr * args = nil_str();
+
+    if (null_string(str)) {
+        name = string("");
+    } else {
+        // name
+        char * p = strtok(str -> content," ");
+        name = string(p);
+        // args
+        while (p = strtok(NULL, " "), p != NULL) {
+            args = snoc_str(args, string(p));
+        }
     }
     free_string(str);
-    return node;
+    return command(name, args);
 }
 
 void print_command(Command * node)
@@ -386,16 +391,24 @@ Line * line(ListCmd * cmds, int out, int err)
     return node;
 }
 
-// String * parse_numbered_pipe(String * raw_str)
-
 Line * parse_line(String * raw_str)
 {
     String * str = trim(raw_str);
     ListCmd * cmds = nil_cmd();
-
     int numbered_pipe = 0;
     int out = -1;
     int err = -1;
+
+    if (string_length(str) == 0) {
+        free_string(str);
+        return line(cmds, out, err);
+    } else if (string_length(str) == 1) {
+        cmds = cons_cmd(parse_command(str), cmds);
+        return line(cmds, out, err);
+    }
+
+
+
 
     // has numbered pipe at the end?
     char * end = str -> content + string_length(str) - 1;
@@ -409,6 +422,7 @@ Line * parse_line(String * raw_str)
             numbered_pipe++;
         }
     }
+
 
     // upon discovery, fill the parsed part with spaces
     if (numbered_pipe == 1) {
@@ -445,20 +459,18 @@ Line * parse_line(String * raw_str)
     int offset = 0;
     int i = 0;
     char * ref = str -> content;
-    while (i < string_length(str) - 2) {
+    while (i + 2 < string_length(str)) {
         if (ref[i] == ' ' && ref[i + 1] == '|' && ref[i + 2] == ' ') {
             // found!
             Command * cmd = parse_command(substring(str, offset, i));
             cmds = snoc_cmd(cmds, cmd);
             offset = i = i + 3;
         } else {
-            // not found
             i++;
         }
     }
-    if (i == string_length(str) - 2)
-        i += 2;
-    Command * cmd = parse_command(substring(str, offset, i));
+
+    Command * cmd = parse_command(substring(str, offset, i + 2));
     cmds = snoc_cmd(cmds, cmd);
     free_string(str);
     return line(cmds, out, err);

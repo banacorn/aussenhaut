@@ -29,7 +29,7 @@ String * trim(String * str);
 String * substring(String * str, int, int); // allocates new spaces
 size_t string_length(String * str);
 size_t string_size(String * str);   // memory size
-Bool null(String * str);
+Bool null_string(String * str);
 char * show_string(String * str);
 void print_string(String * str);
 void free_string(String * str);
