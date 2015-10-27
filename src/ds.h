@@ -14,7 +14,6 @@ typedef unsigned int Bool;
 #define TRUE 1
 #define FALSE 0
 
-
 ////////////////////////////////////////////////////////////////////////////////
 //  String
 ////////////////////////////////////////////////////////////////////////////////
@@ -26,6 +25,7 @@ typedef struct String {
 String * string(char * chars);
 String * string_n(char * chars, int len);
 String * copy_string(String * str);
+String * trim(String * str);
 String * substring(String * str, int, int); // allocates new spaces
 size_t string_length(String * str);
 size_t string_size(String * str);   // memory size
@@ -119,10 +119,11 @@ void free_list_cmd(ListCmd * xs);
 
 typedef struct Line {
     ListCmd * cmds;
-    int       pipeTo;
+    int out;
+    int err;
 } Line;
 
-Line * line(ListCmd *, int);
+Line * line(ListCmd *, int, int);
 Line * parse_line(String *);
 Line * copy_line(Line *);
 void print_line(Line *);

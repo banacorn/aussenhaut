@@ -14,28 +14,6 @@ const char * welcome_msg =
     "** Welcome to the information server. **\n"
     "****************************************\n";
 
-// typedef struct Line {
-//     List *  commands;
-//     int     pipeTo;
-// } Line;
-//
-// Line * alloc_line(List * commands, int pipeTo)
-// {
-//     Line * line = malloc(sizeof(Line));
-//     line -> commands = copy_list(commands);
-//     line -> pipeTo = pipeTo;
-//     return line;
-// }
-//
-// void free_line(Line * line)
-// {
-//     free_list(line -> commands);
-//     free(line);
-// }
-
-
-
-
 char * read_message(int socket)
 {
     char buffer[LINEBUFSIZE];
@@ -148,15 +126,15 @@ int main(int argc, char *argv[])
     // Command * c = parse_command(string("haha gasd hehe yo"));
     // print_command(c);
     // free_command(c);
-    //
-    // String * s = string("aa bb cc");
+
+    // String * s = trim(string("   aa bb cc   "));
     // String * sub = substring(s, 0, 8);
-    // print_string(sub);
+    // print_string(s);
     // free_string(s);
     // free_string(sub);
 
 
-    Line * c = parse_line(string("haha gasd hehe yo | yes |2 3"));
+    Line * c = parse_line(string("fuck ha nope | you wasdf sdfsdf | sdfs !21 |132"));
     print_line(c);
     free_line(c);
 

@@ -27,6 +27,30 @@ String * copy_string(String * str)
     return string(str -> content);
 }
 
+String * trim(String * str)
+{
+    char * ref = str -> content;
+
+    // Trim leading space
+    while(isspace(*ref)) ref++;
+
+    // All spaces?
+    if(*ref == 0) {
+        free_string(str);
+        return string("");
+    } else {
+        // Trim trailing space
+        char * end = ref + strlen(ref) - 1;
+        while(end > ref && isspace(*end)) end--;
+
+        // Write new null terminator
+        *(end+1) = 0;
+        String * new_str = string(ref);
+        free_string(str);
+        return new_str;
+    }
+}
+
 String * substring(String * str, int from, int to)
 {
     if (from > to) {
@@ -159,7 +183,8 @@ ListStr * copy_list_str(ListStr * xs)
 void print_list_str(ListStr * xs)
 {
     if (xs -> nil) {
-        // printf("\n");
+    } else if (xs -> cons -> nil) {
+        printf("%s", xs -> data -> content);
     } else {
         printf("%s ", xs -> data -> content);
         print_list_str(xs -> cons);
@@ -212,7 +237,8 @@ ListInt * copy_list_int(ListInt * xs)
 void print_list_int(ListInt * xs)
 {
     if (xs -> nil) {
-        // printf("\n");
+    } else if (xs -> cons -> nil) {
+        printf("%d", xs -> data);
     } else {
         printf("%d ", xs -> data);
         print_list_int(xs -> cons);
@@ -271,8 +297,12 @@ Command * parse_command(String * str)
 
 void print_command(Command * node)
 {
-    printf("%s ", node -> name -> content);
-    print_list_str(node -> args);
+    if (node -> args -> nil) {
+        printf("%s", node -> name -> content);
+    } else {
+        printf("%s ", node -> name -> content);
+        print_list_str(node -> args);
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -334,6 +364,8 @@ ListCmd * copy_list_cmd(ListCmd * xs)
 void print_list_cmd(ListCmd * xs)
 {
     if (xs -> nil) {
+    } else if (xs -> cons -> nil) {
+        print_command(xs -> data);
     } else {
         print_command(xs -> data);
         printf(" | ");
@@ -344,28 +376,70 @@ void print_list_cmd(ListCmd * xs)
 ////////////////////////////////////////////////////////////////////////////////
 //  Line
 ////////////////////////////////////////////////////////////////////////////////
-//
-// typedef struct Line {
-//     ListCmd * cmds;
-//     int       pipeTo;
-// } Line;
 
-Line * line(ListCmd * cmds, int pipeTo)
+Line * line(ListCmd * cmds, int out, int err)
 {
     Line * node = malloc(sizeof(Line));
     node -> cmds = cmds;
-    node -> pipeTo = pipeTo;
+    node -> out = out;
+    node -> err = err;
     return node;
 }
 
+// String * parse_numbered_pipe(String * raw_str)
 
-// Line * parse_numbered_pipes(String * str)
-
-Line * parse_line(String * str)
+Line * parse_line(String * raw_str)
 {
-    Line * node = malloc(sizeof(Line));
-    node -> cmds = nil_cmd();
-    node -> pipeTo = 1;
+    String * str = trim(raw_str);
+    ListCmd * cmds = nil_cmd();
+
+    int numbered_pipe = 0;
+    int out = -1;
+    int err = -1;
+
+    // has numbered pipe at the end?
+    char * end = str -> content + string_length(str) - 1;
+    if (isdigit(*end)) {
+        while (end > str -> content && isdigit(*end)) end--;
+        if (*(end - 1) == ' ' && *end == '|') {
+            out = atoi(end + 1);
+            numbered_pipe++;
+        } else if (*(end - 1) == ' ' && *end == '!') {
+            err = atoi(end + 1);
+            numbered_pipe++;
+        }
+    }
+
+    // upon discovery, fill the parsed part with spaces
+    if (numbered_pipe == 1) {
+        while(end < str -> content + string_length(str)) {
+            *end = ' ';
+            end++;
+        }
+        str = trim(str);
+    }
+
+    // has numbered pipe at the end?
+    end = str -> content + string_length(str) - 1;
+    if (isdigit(*end)) {
+        while (end > str -> content && isdigit(*end)) end--;
+        if (*(end - 1) == ' ' && *end == '|' && out == -1) {
+            out = atoi(end + 1);
+            numbered_pipe++;
+        } else if (*(end - 1) == ' ' && *end == '!' && err == -1) {
+            err = atoi(end + 1);
+            numbered_pipe++;
+        }
+    }
+
+    // upon discovery, fill the parsed part with spaces
+    if (numbered_pipe == 2) {
+        while(end < str -> content + string_length(str)) {
+            *end = ' ';
+            end++;
+        }
+        str = trim(str);
+    }
 
     // seperating input with " | " and cons the substring before it
     int offset = 0;
@@ -375,50 +449,34 @@ Line * parse_line(String * str)
         if (ref[i] == ' ' && ref[i + 1] == '|' && ref[i + 2] == ' ') {
             // found!
             Command * cmd = parse_command(substring(str, offset, i));
-            node -> cmds = cons_cmd(cmd, node -> cmds);
-            offset = i;
-            break;
+            cmds = snoc_cmd(cmds, cmd);
+            offset = i = i + 3;
         } else {
             // not found
             i++;
         }
     }
     if (i == string_length(str) - 2)
-        i = -1;
-
-    // //  skip the last " | "
-    // offset += 3;
-    // // dealing with the substring after " | "
-    // i = offset;
-    // while (i < string_length(str) - 2) {
-    //     if (ref[i] == ' ' && ref[i + 1] == '|' && isdigit(ref[i + 2])) {
-    //         // found!
-    //         String * sub = substring(str, offset, i);
-    //         print_string(sub);
-    //         free_string(sub);
-    //         // Command * cmd = parse_command(substring(str, offset, i));
-    //         // node -> cmds = cons_cmd(cmd, node -> cmds);
-    //         offset = i;
-    //         break;
-    //     } else {
-    //         // not found
-    //         i++;
-    //     }
-    // }
-
+        i += 2;
+    Command * cmd = parse_command(substring(str, offset, i));
+    cmds = snoc_cmd(cmds, cmd);
     free_string(str);
-    return node;
+    return line(cmds, out, err);
 }
 
 Line * copy_line(Line * node)
 {
-    return line(copy_list_cmd(node -> cmds), node -> pipeTo);
+    return line(copy_list_cmd(node -> cmds), node -> out, node -> err);
 }
 
 void print_line(Line * node)
 {
     print_list_cmd(node -> cmds);
-    printf(" |%d\n", node -> pipeTo);
+    if (node -> out != -1)
+        printf(" |%d", node -> out);
+    if (node -> err != -1)
+        printf(" !%d", node -> err);
+    printf("\n");
 }
 
 void free_line(Line * node)
