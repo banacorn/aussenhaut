@@ -50,12 +50,15 @@ void child(int socket)
         char * message = read_message(socket);
         Line * line = parse_line(string(message));
         print_line(line);
-
-        if (strcmp("exit", line -> cmds -> data -> name -> content) == 0) {
-            free_line(line);
-            break;
+        if (null_cmd(line -> cmds)) {
+            print_line(line);
         } else {
-            free_line(line);
+            if (strcmp("exit", line -> cmds -> data -> name -> content) == 0) {
+                free_line(line);
+                break;
+            } else {
+                free_line(line);
+            }
         }
     }
 }
@@ -124,10 +127,10 @@ void create_server(int port_number, void (*callback)(int))
 
 int main(int argc, char *argv[])
 {
-    // create_server(7000, child);
+    create_server(7000, child);
 
-    Line * l = parse_line(string(""));
-    print_line(l);
-    free_line(l);
+    // Line * l = parse_line(string(""));
+    // print_line(l);
+    // free_line(l);
     return 0;
 }

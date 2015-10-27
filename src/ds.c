@@ -74,7 +74,7 @@ size_t string_size(String * str)
     return strlen(str -> content) + 1;
 }
 
-Bool null_string(String * str)
+Bool null(String * str)
 {
     if (strlen(str -> content) == 0)
         return TRUE;
@@ -158,6 +158,24 @@ ListStr * reverse_str(ListStr * xs)
     }
 }
 
+Bool null_str(ListStr * xs)
+{
+    if (xs -> nil) {
+        return TRUE;
+    } else {
+        return FALSE;
+    }
+}
+
+int length_str(ListStr * xs)
+{
+    if (xs -> nil) {
+        return 0;
+    } else {
+        return 1 + length_str(xs -> cons);
+    }
+}
+
 void free_list_str(ListStr * xs)
 {
     if (xs -> nil) {
@@ -234,6 +252,25 @@ ListInt * copy_list_int(ListInt * xs)
         return cons_int(xs -> data, new_xs);
     }
 }
+
+Bool null_int(ListInt * xs)
+{
+    if (xs -> nil) {
+        return TRUE;
+    } else {
+        return FALSE;
+    }
+}
+
+int length_int(ListInt * xs)
+{
+    if (xs -> nil) {
+        return 0;
+    } else {
+        return 1 + length_int(xs -> cons);
+    }
+}
+
 void print_list_int(ListInt * xs)
 {
     if (xs -> nil) {
@@ -285,7 +322,7 @@ Command * parse_command(String * str)
     String * name;
     ListStr * args = nil_str();
 
-    if (null_string(str)) {
+    if (null(str)) {
         name = string("");
     } else {
         // name
@@ -341,6 +378,24 @@ ListCmd * snoc_cmd(ListCmd * xs, Command * data)
         ListCmd * result = cons_cmd(xs -> data, snoc_cmd(xs -> cons, data));
         free(xs);
         return result;
+    }
+}
+
+Bool null_cmd(ListCmd * xs)
+{
+    if (xs -> nil) {
+        return TRUE;
+    } else {
+        return FALSE;
+    }
+}
+
+int length_cmd(ListCmd * xs)
+{
+    if (xs -> nil) {
+        return 0;
+    } else {
+        return 1 + length_cmd(xs -> cons);
     }
 }
 
@@ -406,9 +461,6 @@ Line * parse_line(String * raw_str)
         cmds = cons_cmd(parse_command(str), cmds);
         return line(cmds, out, err);
     }
-
-
-
 
     // has numbered pipe at the end?
     char * end = str -> content + string_length(str) - 1;

@@ -29,7 +29,7 @@ String * trim(String * str);
 String * substring(String * str, int, int); // allocates new spaces
 size_t string_length(String * str);
 size_t string_size(String * str);   // memory size
-Bool null_string(String * str);
+Bool null(String * str);
 char * show_string(String * str);
 void print_string(String * str);
 void free_string(String * str);
@@ -54,6 +54,8 @@ ListStr * copy_list_str(ListStr * xs);
 ListStr * append_str(ListStr * xs, ListStr * ys);
 ListStr * reverse_str(ListStr * xs);
 ListStr * tokenize(String * data, String * sep);
+Bool null_str(ListStr *);
+int length_str(ListStr *);
 char * show_list_str(ListStr * xs);
 void print_list_str(ListStr * xs);
 void free_list_str(ListStr * xs);
@@ -75,6 +77,8 @@ ListInt * nil_int();
 ListInt * cons_int(int data, ListInt * xs);
 ListInt * snoc_int(ListInt * xs, int data);
 ListInt * copy_list_int(ListInt * xs);
+Bool null_int(ListInt *);
+int length_int(ListInt *);
 void print_list_int(ListInt * xs);
 void free_list_int(ListInt * xs);
 
@@ -110,6 +114,8 @@ ListCmd * nil_cmd();
 ListCmd * cons_cmd(Command * data, ListCmd * xs);
 ListCmd * snoc_cmd(ListCmd * xs, Command * data);
 ListCmd * copy_list_cmd(ListCmd * xs);
+Bool null_cmd(ListCmd *);
+int length_cmd(ListCmd *);
 void print_list_cmd(ListCmd * xs);
 void free_list_cmd(ListCmd * xs);
 
