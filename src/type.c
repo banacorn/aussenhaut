@@ -1,7 +1,5 @@
 #include "type.h"
 
-#include <ctype.h>
-
 ////////////////////////////////////////////////////////////////////////////////
 //  Generic boxed data
 ////////////////////////////////////////////////////////////////////////////////
@@ -63,107 +61,52 @@ void print_pair(Pair * node)
     print(node -> snd);
 }
 
-
 ////////////////////////////////////////////////////////////////////////////////
-//  String
+//  Either
 ////////////////////////////////////////////////////////////////////////////////
 
-
-String * string_n(char * chars, int len)
+Either * left(Box * x)
 {
-    String * new_str = malloc(sizeof(String));
-    new_str -> content = malloc(len + 1);
-    char * buf = new_str -> content;
-    strncpy(buf, chars, len);
-    buf[len] = 0;
-    return new_str;
+    Either * node = malloc(sizeof(Either));
+    node -> left = x;
+    node -> right = NULL;
+    return node;
+}
+Either * right(Box * x)
+{
+    Either * node = malloc(sizeof(Either));
+    node -> left = NULL;
+    node -> right = x;
+    return node;
 }
 
-String * string(char * chars)
+Either * copy_either(Either * node)
 {
-    return string_n(chars, strlen(chars));
-}
-
-String * copy_string(String * str)
-{
-    return string(str -> content);
-}
-
-String * trim(String * str)
-{
-    char * ref = str -> content;
-
-    // Trim leading space
-    while(isspace(*ref)) ref++;
-
-    // All spaces?
-    if(*ref == 0) {
-        free_string(str);
-        return string("");
+    if (node -> left) {
+        return left(copy(node -> left));
     } else {
-        // Trim trailing space
-        char * end = ref + strlen(ref) - 1;
-        while(end > ref && isspace(*end)) end--;
-
-        // Write new null terminator
-        *(end+1) = 0;
-        String * new_str = string(ref);
-        free_string(str);
-        return new_str;
+        return right(copy(node -> right));
     }
 }
 
-String * substring(String * str, int from, int to)
+void free_either(Either * node)
 {
-    if (from > to) {
-        return string("");
-    } else if (0 > from) {
-        return string("");
-    } else if (to > string_length(str)) {
-        return string("");
+    if (node -> left) {
+        destruct(node -> left);
     } else {
-        char * ref = str -> content;
-        return string_n(ref + from, to - from);
+        destruct(node -> right);
     }
 }
 
-size_t string_length(String * str)
+void print_either(Either * node)
 {
-    return strlen(str -> content);
-}
-size_t string_size(String * str)
-{
-    return strlen(str -> content) + 1;
-}
-
-Bool null_string(String * str)
-{
-    if (strlen(str -> content) == 0)
-        return TRUE;
-    else
-        return FALSE;
-}
-
-char * show_string(String * str)
-{
-    return str -> content;
-}
-
-void print_string(String * str)
-{
-    char * ref = str -> content;
-    printf("%s\n", ref);
-}
-
-void free_string(String * str)
-{
-    free(str -> content);
-    free(str);
-}
-
-Box * box_str(char * chars)
-{
-    return box(string(chars), (void (*)(void *))free_string, (void * (*)(void *))copy_string, (void (*)(void *))print_string);
+    if (node -> left) {
+        printf("Left ");
+        print(node -> left);
+    } else {
+        printf("Right ");
+        print(node -> right);
+    }
 }
 
 

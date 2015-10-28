@@ -1,10 +1,8 @@
 #ifndef TYPE_H_
 #define TYPE_H_
 
-#include <stddef.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include <string.h>
 
 ////////////////////////////////////////////////////////////////////////////////
 //  Generic boxed data
@@ -37,6 +35,22 @@ void free_pair(Pair *);
 void print_pair(Pair *);
 
 
+////////////////////////////////////////////////////////////////////////////////
+//  Either
+////////////////////////////////////////////////////////////////////////////////
+
+typedef struct Either {
+    Box * left;
+    Box * right;
+} Either;
+
+Either * left(Box *);
+Either * right(Box *);
+Either * copy_either(Either *);
+void free_either(Either *);
+void print_either(Either *);
+
+
 
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -46,27 +60,6 @@ void print_pair(Pair *);
 typedef unsigned int Bool;
 #define TRUE 1
 #define FALSE 0
-
-////////////////////////////////////////////////////////////////////////////////
-//  String
-////////////////////////////////////////////////////////////////////////////////
-
-typedef struct String {
-    char * content;
-} String;
-
-String * string(char * chars);
-String * string_n(char * chars, int len);
-String * copy_string(String * str);
-String * trim(String * str);
-String * substring(String * str, int, int); // allocates new spaces
-size_t string_length(String * str);
-size_t string_size(String * str);   // memory size
-Bool null_string(String * str);
-char * show_string(String * str);
-void print_string(String * str);
-void free_string(String * str);
-Box * box_str(char *);
 
 ////////////////////////////////////////////////////////////////////////////////
 //  List

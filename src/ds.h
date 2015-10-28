@@ -2,10 +2,7 @@
 #define DS_H_
 
 #include "type.h"
-// #include <stddef.h>
-// #include <stdlib.h>
-// #include <stdio.h>
-// #include <string.h>
+#include "string.h"
 
 ////////////////////////////////////////////////////////////////////////////////
 //  Command
