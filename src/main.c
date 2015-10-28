@@ -5,7 +5,9 @@
 #include <netinet/in.h>
 #include <netinet/ip.h>
 #include <strings.h>
+
 #include "ds.h"
+#include "type.h"
 
 #define LINEBUFSIZE 16384
 #define CMDBUFSIZE 512
@@ -42,19 +44,19 @@ void child(int socket)
 
     while (1) {
         send_message(socket, string("% "));
-        Line * line = parse_line(read_message(socket));
-        print_line(line);
-        if (null_cmd(line -> cmds)) {   // empty command
-            free_line(line);
-        } else {
-            if (strcmp("exit", line -> cmds -> data -> name -> content) == 0) {
-                free_line(line);
-                break;
-            } else if (strcmp("printenv", line -> cmds -> data -> name -> content) == 0) {
-                // printf("%s\n", );
-                free_line(line);
-            }
-        }
+        // Line * line = parse_line(read_message(socket));
+        // print_line(line);
+        // if (null_cmd(line -> cmds)) {   // empty command
+        //     free_line(line);
+        // } else {
+        //     if (strcmp("exit", line -> cmds -> data -> name -> content) == 0) {
+        //         free_line(line);
+        //         break;
+        //     } else if (strcmp("printenv", line -> cmds -> data -> name -> content) == 0) {
+        //         // printf("%s\n", );
+        //         free_line(line);
+        //     }
+        // }
     }
 }
 
