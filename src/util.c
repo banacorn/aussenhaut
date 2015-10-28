@@ -26,7 +26,7 @@ Command * parse_command(String * str)
         return command(string(""), nil());
     } else {
         List * tokens = tokenize(str , string(" "));
-        String * name = unbox(head(tokens));
+        String * name = head(tokens);
         List * args = tail(tokens);
         free_list(tokens);
         return command(name, args);
@@ -48,7 +48,7 @@ void free_command(Command * node)
 
 void print_command(Command * node)
 {
-    if (node -> args -> nil) {
+    if (node -> args -> Nil) {
         printf("%s", node -> name -> content);
     } else {
         printf("%s ", node -> name -> content);
@@ -56,23 +56,48 @@ void print_command(Command * node)
     }
 }
 
-Box * box_cmd(String * name, List * args)
+Box * box_cmd(Command * cmd)
 {
-    return box(command(name, args), (void (*)(void *))free_command, (void * (*)(void *))copy_command, (void (*)(void *))print_command);
+    return box(cmd, (void (*)(void *))free_command, (void * (*)(void *))copy_command, (void (*)(void *))print_command);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 //  Line
 ////////////////////////////////////////////////////////////////////////////////
 
-Line * line(List * cmds, Bool redirect, int out, int err)
+Line * line(List * cmds, Bool redirect, String * target, int out, int err)
 {
     Line * node = malloc(sizeof(Line));
     node -> cmds = cmds;
     node -> redirect = redirect;
+    node -> target = target;
     node -> out = out;
     node -> err = err;
     return node;
+}
+
+// String -> Maybe (String, String)
+Maybe * parse_redirected(String * str)
+{
+    str = trim(str);
+    Pair * splitted = rsplit(str, string(" > "));
+    List * snd_part = tokenize(snd(splitted), string(" "));
+    String * first_part = fst(splitted);
+    free_pair(splitted);
+    if (length(snd_part) == 1) {
+        String * last_str = head(snd_part);
+        free_list(snd_part);
+        return just(box_pair(pair(box_str(first_part), box_str(last_str))));
+    } else {
+        free_string(first_part);
+        free_list(snd_part);
+        return nothing();
+    }
+}
+
+Box * parse_command_boxed(Box * data)
+{
+    return box_cmd(parse_command(unbox(data)));
 }
 
 Line * parse_line(String * str)
@@ -86,12 +111,27 @@ Line * parse_line(String * str)
     print_string(str);
     printf("\n");
 
-    // see if redirected
-    Pair * splitted = rsplit(str, string(" > "));
+    Maybe * result_redirected = parse_redirected(str);
+    if (result_redirected -> Nothing == FALSE) {    // redirected
+        Pair * splitted = from_just(result_redirected);
+        List * commands = map(parse_command_boxed, tokenize(fst(splitted), string(" | ")));
+        String * target = snd(splitted);
 
-    printf("=== splitted pair ===\n");
-    print_pair(splitted);
-    printf("\n");
+        Line * result = line(commands, TRUE, target, -1, -1);
+
+        // cleanup
+        free_pair(splitted);
+        free_maybe(result_redirected);
+
+        return result;
+    } else {
+        // not redirected
+        // print_maybe(result_redirected);
+        free_maybe(result_redirected);
+    }
+    // printf("\n");
+
+    // see if redirected
 
     // Bool has_both_parts = !null_string(fst(splitted))
     // Bool the_2nd_part_has_1_command = !null_string(fst(splitted))
@@ -102,11 +142,10 @@ Line * parse_line(String * str)
     // free_line(rest_line);
     // printf("\n");
     // // printf("arg length of the last command%d\n", arg_length(unbox(p)));
-    free_pair(splitted);
 
 
 
-    return line(nil(), redirect, out, err);
+    return line(nil(), redirect, string(""), out, err);
 }
 //     String * str = trim(raw_str);
 //     ListCmd * cmds = nil_cmd();
@@ -192,21 +231,15 @@ Line * parse_line(String * str)
 //
 Line * copy_line(Line * node)
 {
-    return line(copy_list(node -> cmds), node -> redirect, node -> out, node -> err);
+    return line(copy_list(node -> cmds), node -> redirect, node -> target, node -> out, node -> err);
 }
 
 void print_line(Line * node)
 {
     if (node -> redirect) {         // has ">"
-        List * init_cmds = init(node -> cmds);
-        Command * last_cmd = unbox(last(node -> cmds));
-
-        print_list(init_cmds);
+        print_list(node -> cmds);
         printf(" > ");
-        print_command(last_cmd);
-
-        free_list(init_cmds);
-        free_command(last_cmd);
+        print_string(node -> target);
     } else {
         print_list(node -> cmds);
         if (!null(node -> cmds)) {
@@ -222,5 +255,6 @@ void print_line(Line * node)
 void free_line(Line * node)
 {
     free_list(node -> cmds);
+    free_string(node -> target);
     free(node);
 }

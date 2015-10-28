@@ -1,5 +1,6 @@
 #include "type.h"
 
+
 ////////////////////////////////////////////////////////////////////////////////
 //  Generic boxed data
 ////////////////////////////////////////////////////////////////////////////////
@@ -45,38 +46,43 @@ void print(Box * node)
 Pair * pair(Box * a, Box * b)
 {
     Pair * node = malloc(sizeof(Pair));
-    node -> fst = a;
-    node -> snd = b;
+    node -> Fst = a;
+    node -> Snd = b;
     return node;
 }
 
 void * fst(Pair * node) {
-    return unbox(copy(node -> fst));
+    return unbox(copy(node -> Fst));
 }
 
 void * snd(Pair * node) {
-    return unbox(copy(node -> snd));
+    return unbox(copy(node -> Snd));
 }
 
 Pair * copy_pair(Pair * old)
 {
-    return pair(copy(old -> fst), copy(old -> snd));
+    return pair(copy(old -> Fst), copy(old -> Snd));
 }
 
 void free_pair(Pair * node)
 {
-    destruct(node -> fst);
-    destruct(node -> snd);
+    destruct(node -> Fst);
+    destruct(node -> Snd);
     free(node);
 }
 
 void print_pair(Pair * node)
 {
     printf("( ");
-    print(node -> fst);
+    print(node -> Fst);
     printf(" , ");
-    print(node -> snd);
+    print(node -> Snd);
     printf(" )");
+}
+
+Box * box_pair(Pair * node)
+{
+    return box(node, (void (*)(void *))free_pair, (void * (*)(void *))copy_pair, (void (*)(void *))print_pair);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -86,47 +92,51 @@ void print_pair(Pair * node)
 Either * left(Box * x)
 {
     Either * node = malloc(sizeof(Either));
-    node -> left = x;
-    node -> right = NULL;
+    node -> Left = x;
+    node -> Right = NULL;
     return node;
 }
 Either * right(Box * x)
 {
     Either * node = malloc(sizeof(Either));
-    node -> left = NULL;
-    node -> right = x;
+    node -> Left = NULL;
+    node -> Right = x;
     return node;
 }
 
 Either * copy_either(Either * node)
 {
-    if (node -> left) {
-        return left(copy(node -> left));
+    if (node -> Left) {
+        return left(copy(node -> Left));
     } else {
-        return right(copy(node -> right));
+        return right(copy(node -> Right));
     }
 }
 
 void free_either(Either * node)
 {
-    if (node -> left) {
-        destruct(node -> left);
+    if (node -> Left) {
+        destruct(node -> Left);
     } else {
-        destruct(node -> right);
+        destruct(node -> Right);
     }
 }
 
 void print_either(Either * node)
 {
-    if (node -> left) {
+    if (node -> Left) {
         printf("Left ");
-        print(node -> left);
+        print(node -> Left);
     } else {
         printf("Right ");
-        print(node -> right);
+        print(node -> Right);
     }
 }
 
+Box * box_either(Either * node)
+{
+    return box(node, (void (*)(void *))free_either, (void * (*)(void *))copy_either, (void (*)(void *))print_either);
+}
 ////////////////////////////////////////////////////////////////////////////////
 //  Maybe
 ////////////////////////////////////////////////////////////////////////////////
@@ -162,6 +172,15 @@ void * from_just(Maybe * node)
     }
 }
 
+Maybe * copy_maybe(Maybe * node)
+{
+    if (node -> Nothing) {
+        return nothing();
+    } else {
+        return just(copy(node -> Just));
+    }
+}
+
 void print_maybe(Maybe * node)
 {
     if (node -> Nothing) {
@@ -182,6 +201,12 @@ void free_maybe(Maybe * node)
     }
 }
 
+Box * box_maybe(Maybe * node)
+{
+    return box(node, (void (*)(void *))free_maybe, (void * (*)(void *))copy_maybe, (void (*)(void *))print_maybe);
+}
+
+
 ////////////////////////////////////////////////////////////////////////////////
 //  List
 ////////////////////////////////////////////////////////////////////////////////
@@ -189,8 +214,8 @@ void free_maybe(Maybe * node)
 List * nil()
 {
     List * node = malloc(sizeof(List));
-    node -> nil = TRUE;
-    node -> cons = NULL;
+    node -> Nil = TRUE;
+    node -> Cons = NULL;
     node -> data = NULL;
     return node;
 }
@@ -198,19 +223,19 @@ List * nil()
 List * cons(Box * box, List * xs)
 {
     List * node = malloc(sizeof(List));
-    node -> nil = FALSE;
+    node -> Nil = FALSE;
     node -> data = box;
-    node -> cons = xs;
+    node -> Cons = xs;
     return node;
 }
 
 // O(n)
 List * snoc(List * xs, Box * box)
 {
-    if (xs -> nil) {
+    if (xs -> Nil) {
         return cons(box, xs);
     } else {
-        List * result = cons(xs -> data, snoc(xs -> cons, box));
+        List * result = cons(xs -> data, snoc(xs -> Cons, box));
         free(xs);
         return result;
     }
@@ -218,70 +243,68 @@ List * snoc(List * xs, Box * box)
 
 List * copy_list(List * xs)
 {
-    if (xs -> nil) {
+    if (xs -> Nil) {
         return nil();
     } else {
-        return cons(copy(xs -> data), copy_list(xs -> cons));
+        return cons(copy(xs -> data), copy_list(xs -> Cons));
     }
 }
 
-Box * head(List * xs)
+void * head(List * xs)
 {
-    if (xs -> nil) {
+    if (xs -> Nil) {
         perror("head on empty list");
         return NULL;
     } else {
-        Box * result = copy(xs -> data);
-        return result;
+        return unbox(copy(xs -> data));
     }
 }
 
 List * tail(List * xs)
 {
-    if (xs -> nil) {
+    if (xs -> Nil) {
         perror("tail on empty list");
         return NULL;
     } else {
-        List * result = copy_list(xs -> cons);
+        List * result = copy_list(xs -> Cons);
         return result;
     }
 }
 
 List * init(List * xs)
 {
-    if (xs -> nil) {                    // 0
+    if (xs -> Nil) {                    // 0
         perror("init on empty list");
         return NULL;
-    } else if (xs -> cons -> nil) {     // 1
+    } else if (xs -> Cons -> Nil) {     // 1
         return nil();
     } else {
-        List * result = cons(copy(xs -> data), init(copy_list(xs -> cons)));
+        List * result = cons(copy(xs -> data), init(copy_list(xs -> Cons)));
         return result;
     }
 }
 
-Box * last(List * xs)
+void * last(List * xs)
 {
-    if (xs -> nil) {                    // 0
+    if (xs -> Nil) {                    // 0
         perror("last on empty list");
         return NULL;
-    } else if (xs -> cons -> nil) {     // 1
+    } else if (xs -> Cons -> Nil) {     // 1
         Box * result = copy(xs -> data);
         return result;
     } else {
-        Box * result = last(copy_list(xs -> cons));
-        return result;
+        return unbox(last(copy_list(xs -> Cons)));
     }
 }
 
 
 List * append(List * xs, List * ys)
 {
-    if (xs -> nil) {
+    if (xs -> Nil) {
         free(xs);
         return ys;
     } else {
-        List * result = cons(xs -> data, append(xs -> cons, ys));
+        List * result = cons(xs -> data, append(xs -> Cons, ys));
         free(xs);
         return result;
     }
@@ -289,35 +312,47 @@ List * append(List * xs, List * ys)
 
 List * reverse(List * xs)
 {
-    if (xs -> nil) {
+    if (xs -> Nil) {
         return xs;
     } else {
-        List * result = snoc(reverse(xs -> cons), xs -> data);
+        List * result = snoc(reverse(xs -> Cons), xs -> data);
         free(xs);
         return result;
     }
 }
 
+List * map(Box *(*f)(Box *), List * xs)
+{
+    if (xs -> Nil) {
+        return xs;
+    } else {
+        List * result = map(f, xs -> Cons);
+        Box * val = f(xs -> data);
+        free(xs);
+        return cons(val, result);
+    }
+}
+
 Bool null(List * xs)
 {
-    return xs -> nil;
+    return xs -> Nil;
 }
 
 int length(List * xs)
 {
-    if (xs -> nil) {
+    if (xs -> Nil) {
         return 0;
     } else {
-        return 1 + length(xs -> cons);
+        return 1 + length(xs -> Cons);
     }
 }
 
 void free_list(List * xs)
 {
-    if (xs -> nil) {
+    if (xs -> Nil) {
         free(xs);
     } else {
-        free_list(xs -> cons);
+        free_list(xs -> Cons);
         destruct(xs -> data);
         free(xs);
     }
@@ -325,14 +360,14 @@ void free_list(List * xs)
 
 void print_list_aux(List * xs)
 {
-    if (xs -> nil) {
+    if (xs -> Nil) {
         // prints nothing
-    } else if (xs -> cons -> nil) {
+    } else if (xs -> Cons -> Nil) {
         print(xs -> data);
     } else {
         print(xs -> data);
         printf(", ");
-        print_list_aux(xs -> cons);
+        print_list_aux(xs -> Cons);
     }
 }
 

@@ -127,7 +127,7 @@ int main(int argc, char *argv[])
     // List * l = tokenize(s, t);
     // print_list(l);
     //
-    // String * a = unbox(head(l));
+    // String * a = head(l));
     // print_string(a);
     // free_string(a);
 
@@ -145,7 +145,7 @@ int main(int argc, char *argv[])
     // free_command(c);
 
 
-    String * s = string("a b | c d > e");
+    String * s = string("a b | c d | sdae |2");
     Line * c = parse_line(s);
 
     printf("=== parsed line ===\n");

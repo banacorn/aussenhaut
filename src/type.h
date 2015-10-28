@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+
 ////////////////////////////////////////////////////////////////////////////////
 //  Generic boxed data
 ////////////////////////////////////////////////////////////////////////////////
@@ -26,8 +27,8 @@ void print(Box *);
 ////////////////////////////////////////////////////////////////////////////////
 
 typedef struct Pair {
-    Box * fst;
-    Box * snd;
+    Box * Fst;
+    Box * Snd;
 } Pair;
 
 Pair * pair(Box *, Box *);
@@ -36,15 +37,15 @@ void * snd(Pair *);
 Pair * copy_pair(Pair *);
 void free_pair(Pair *);
 void print_pair(Pair *);
-
+Box * box_pair(Pair *);
 
 ////////////////////////////////////////////////////////////////////////////////
 //  Either
 ////////////////////////////////////////////////////////////////////////////////
 
 typedef struct Either {
-    Box * left;
-    Box * right;
+    Box * Left;
+    Box * Right;
 } Either;
 
 Either * left(Box *);
@@ -52,6 +53,7 @@ Either * right(Box *);
 Either * copy_either(Either *);
 void free_either(Either *);
 void print_either(Either *);
+Box * box_either(Either *);
 
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -75,16 +77,18 @@ Maybe * nothing();
 Maybe * just(Box *);
 void * from_just(Maybe *);
 
+Maybe * copy_maybe(Maybe *);
 void print_maybe(Maybe *);
 void free_maybe(Maybe *);
+Box * box_maybe(Maybe *);
 
 ////////////////////////////////////////////////////////////////////////////////
 //  List
 ////////////////////////////////////////////////////////////////////////////////
 
 typedef struct List {
-    Bool nil;               //  Nil
-    struct List * cons;     //  Cons
+    Bool Nil;               //  Nil
+    struct List * Cons;     //  Cons
     Box * data;             //  Carrier
 } List;
 
@@ -93,18 +97,21 @@ List * cons(Box *, List *);
 List * snoc(List *, Box *);
 List * copy_list(List *);
 
-Box * head(List *);
+void * head(List *);
 List * tail(List *);
 List * init(List *);
-Box * last(List *);
+void * last(List *);
 
 List * append(List *, List *);
 List * reverse(List *);
+
+List * map(Box *(*)(Box *), List *);
 
 Bool null(List *);
 int length(List *);
 
 void free_list(List *);
 void print_list(List *);
+Box * box_list(List *);
 
 #endif // TYPE_H_

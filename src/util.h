@@ -26,12 +26,15 @@ void print_command(Command * node);
 
 typedef struct Line {
     List * cmds;
+    // redirection
     Bool redirect;  // >
+    String * target;
+    // piping
     int out;        // |
     int err;        // !
 } Line;
 
-Line * line(List *, Bool, int, int);
+Line * line(List *, Bool, String *, int, int);
 Line * parse_line(String *);
 Line * copy_line(Line *);
 void print_line(Line *);
