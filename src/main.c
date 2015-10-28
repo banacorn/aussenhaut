@@ -120,7 +120,21 @@ void create_server(int port_number, void (*callback)(int))
 
 int main(int argc, char *argv[])
 {
-    create_server(7000, child);
+    // create_server(7000, child);
+
+    // List * l = cons(box_str("Apple"), cons(box_str("Orange"), nil()));
+    // List * g = copy_list(l);
+    // print_list(l);
+    // print_list(g);
+    // free_list(l);
+    // free_list(g);
+
+    // Box * s = box_str("hey");
+    // print(s);
+    // Box * t = copy(s);
+    // print(t);
+    // destruct(s);
+    // destruct(t);
 
     // Line * l = parse_line(string(""));
     // print_line(l);

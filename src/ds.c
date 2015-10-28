@@ -3,6 +3,38 @@
 #include <ctype.h>
 
 ////////////////////////////////////////////////////////////////////////////////
+//  Generic data boxed with builtin destructor
+////////////////////////////////////////////////////////////////////////////////
+
+Box * box(void * content, void (*destructor)(void *), void * (*copier)(void *), void (*printer)(void *))
+{
+    Box * node = malloc(sizeof(Box));
+    node -> content = content;
+    node -> destructor = destructor;
+    node -> copier = copier;
+    node -> printer = printer;
+    return node;
+}
+
+Box * copy(Box * node)
+{
+    void * new_content = (node -> copier)(node -> content);
+    return box(new_content, node -> destructor, node -> copier, node -> printer);
+}
+
+void destruct(Box * node)
+{
+    (node -> destructor)(node -> content);
+    free(node);
+}
+
+void print(Box * node)
+{
+    (node -> printer)(node -> content);
+}
+
+
+////////////////////////////////////////////////////////////////////////////////
 //  String
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -74,7 +106,7 @@ size_t string_size(String * str)
     return strlen(str -> content) + 1;
 }
 
-Bool null(String * str)
+Bool null_string(String * str)
 {
     if (strlen(str -> content) == 0)
         return TRUE;
@@ -97,6 +129,112 @@ void free_string(String * str)
 {
     free(str -> content);
     free(str);
+}
+
+Box * box_str(char * chars)
+{
+    return box(string(chars), (void (*)(void *))free_string, (void * (*)(void *))copy_string, (void (*)(void *))print_string);
+}
+
+
+////////////////////////////////////////////////////////////////////////////////
+//  List
+////////////////////////////////////////////////////////////////////////////////
+
+List * nil()
+{
+    List * node = malloc(sizeof(List));
+    node -> nil = TRUE;
+    node -> cons = NULL;
+    node -> data = NULL;
+    return node;
+}
+
+List * cons(Box * box, List * xs)
+{
+    List * node = malloc(sizeof(List));
+    node -> nil = FALSE;
+    node -> data = box;
+    node -> cons = xs;
+    return node;
+}
+
+// O(n)
+List * snoc(List * xs, Box * box)
+{
+    if (xs -> nil) {
+        return cons(box, xs);
+    } else {
+        List * result = cons(xs -> data, snoc(xs -> cons, box));
+        free(xs);
+        return result;
+    }
+}
+
+List * copy_list(List * xs)
+{
+    if (xs -> nil) {
+        return nil();
+    } else {
+        return cons(copy(xs -> data), copy_list(xs -> cons));
+    }
+}
+
+List * append(List * xs, List * ys)
+{
+    if (xs -> nil) {
+        free(xs);
+        return ys;
+    } else {
+        List * result = cons(xs -> data, append(xs -> cons, ys));
+        free(xs);
+        return result;
+    }
+}
+
+List * reverse(List * xs)
+{
+    if (xs -> nil) {
+        return xs;
+    } else {
+        List * result = snoc(reverse(xs -> cons), xs -> data);
+        free(xs);
+        return result;
+    }
+}
+
+Bool null(List * xs)
+{
+    return xs -> nil;
+}
+
+int length(List * xs)
+{
+    if (xs -> nil) {
+        return 0;
+    } else {
+        return 1 + length(xs -> cons);
+    }
+}
+
+void free_list(List * xs)
+{
+    if (xs -> nil) {
+        free(xs);
+    } else {
+        free_list(xs -> cons);
+        destruct(xs -> data);
+        free(xs);
+    }
+}
+
+void print_list(List * xs)
+{
+    if (xs -> nil) {
+    } else {
+        print(xs -> data);
+        print_list(xs -> cons);
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -322,7 +460,7 @@ Command * parse_command(String * str)
     String * name;
     ListStr * args = nil_str();
 
-    if (null(str)) {
+    if (null_string(str)) {
         name = string("");
     } else {
         // name
