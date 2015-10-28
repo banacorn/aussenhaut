@@ -28,6 +28,11 @@ String * copy_string(String * str)
     return string(str -> content);
 }
 
+Bool compare_string(String * a, String * b)
+{
+    return (Bool)(strcmp(a -> content, b -> content) == 0);
+}
+
 String * trim(String * str)
 {
     char * ref = str -> content;
@@ -49,6 +54,100 @@ String * trim(String * str)
         String * new_str = string(ref);
         free_string(str);
         return new_str;
+    }
+}
+
+Pair * split(String * str, String * sep)
+{
+    if (string_length(str) < string_length(sep)) {
+        Pair * result = pair(box_str(str), box_chars(""));
+        free_string(sep);
+        return result;
+    } else {
+        Pair * result;
+        int cursor = 0;
+        while ((cursor + string_length(sep)) < (string_length(str) + 1)) {
+            String * sub = substring(str, cursor, cursor + string_length(sep));
+
+            if (compare_string(sub, sep)) {
+                free_string(sub);
+
+                String * first_part = substring(str, 0, cursor);
+                String * second_part = substring(str, cursor + string_length(sep), string_length(str));
+                free_string(str);
+                free_string(sep);
+                return pair(box_str(first_part), box_str(second_part));
+                break;
+            } else {
+                free_string(sub);
+            }
+            cursor++;
+        }
+        result = pair(box_str(str), box_chars(""));
+        free_string(sep);
+        return result;
+    }
+}
+
+Pair * rsplit(String * str, String * sep)
+{
+    if (string_length(str) < string_length(sep)) {
+        Pair * result = pair(box_chars(""), box_str(str));
+        free_string(sep);
+        return result;
+    } else {
+        Pair * result;
+        int cursor = string_length(str) - string_length(sep);
+        while (cursor > 0) {
+            String * sub = substring(str, cursor, cursor + string_length(sep));
+
+            if (compare_string(sub, sep)) {
+                free_string(sub);
+
+                String * first_part = substring(str, 0, cursor);
+                String * second_part = substring(str, cursor + string_length(sep), string_length(str));
+                free_string(str);
+                free_string(sep);
+                return pair(box_str(first_part), box_str(second_part));
+                break;
+            } else {
+                free_string(sub);
+            }
+            cursor--;
+        }
+        result = pair(box_chars(""), box_str(str));
+        free_string(sep);
+        return result;
+    }
+}
+
+List * tokenize(String * str, String * sep)
+{
+    if (string_length(str) < string_length(sep)) {
+        free_string(sep);
+        return cons(box_str(str), nil());
+    } else {
+        List * result = nil();
+        int cursor_old = 0;
+        int cursor = 0;
+        while ((cursor + string_length(sep)) < (string_length(str) + 1)) {
+            String * sub = substring(str, cursor, cursor + string_length(sep));
+
+            if (compare_string(sub, sep)) {
+                free_string(sub);
+                String * cut = substring(str, cursor_old, cursor);
+                result = snoc(result, box_str(cut));
+                cursor_old = cursor + string_length(sep);
+            } else {
+                free_string(sub);
+            }
+            cursor++;
+        }
+        String * rest = substring(str, cursor_old, string_length(str));
+        result = snoc(result, box_str(rest));
+        free_string(str);
+        free_string(sep);
+        return result;
     }
 }
 
@@ -91,7 +190,7 @@ char * show_string(String * str)
 void print_string(String * str)
 {
     char * ref = str -> content;
-    printf("%s\n", ref);
+    printf("\"%s\"", ref);
 }
 
 void free_string(String * str)
@@ -100,7 +199,12 @@ void free_string(String * str)
     free(str);
 }
 
-Box * box_str(char * chars)
+Box * box_str(String * str)
+{
+    return box(str, (void (*)(void *))free_string, (void * (*)(void *))copy_string, (void (*)(void *))print_string);
+}
+
+Box * box_chars(char * chars)
 {
     return box(string(chars), (void (*)(void *))free_string, (void * (*)(void *))copy_string, (void (*)(void *))print_string);
 }

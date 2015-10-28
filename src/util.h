@@ -1,5 +1,5 @@
-#ifndef DS_H_
-#define DS_H_
+#ifndef UTIL_H_
+#define UTIL_H_
 
 #include "type.h"
 #include "string.h"
@@ -25,7 +25,7 @@ void print_command(Command * node);
 
 typedef struct Line {
     List * cmds;
-    Bool redirect;   // >
+    Bool redirect;  // >
     int out;        // |
     int err;        // !
 } Line;
@@ -33,8 +33,7 @@ typedef struct Line {
 // Line * line(ListCmd *, Bool, int, int);
 // Line * parse_line(String *);
 // Line * copy_line(Line *);
-// void print_line(Line *);
-// void free_line(Line *);
-//
+void print_line(Line *);
+void free_line(Line *);
 
-#endif // DS_H_
+#endif // UTIL_H_

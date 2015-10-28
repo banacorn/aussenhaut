@@ -14,6 +14,13 @@ Box * box(void * content, void (*destructor)(void *), void * (*copier)(void *), 
     return node;
 }
 
+void * unbox(Box * node)
+{
+    void * result = node -> content;
+    free(node);
+    return result;
+}
+
 Box * copy(Box * node)
 {
     void * new_content = (node -> copier)(node -> content);
@@ -153,6 +160,66 @@ List * copy_list(List * xs)
     }
 }
 
+Box * head(List * xs)
+{
+    if (xs -> nil) {
+        perror("head on empty list");
+        free_list(xs);
+        return NULL;
+    } else {
+        Box * result = copy(xs -> data);
+        free_list(xs);
+        return result;
+    }
+}
+
+List * tail(List * xs)
+{
+    if (xs -> nil) {
+        perror("tail on empty list");
+        free_list(xs);
+        return NULL;
+    } else {
+        List * result = copy_list(xs -> cons);
+        free_list(xs);
+        return result;
+    }
+}
+
+List * init(List * xs)
+{
+    if (xs -> nil) {                    // 0
+        perror("init on empty list");
+        free_list(xs);
+        return NULL;
+    } else if (xs -> cons -> nil) {     // 1
+        free_list(xs);
+        return nil();
+    } else {
+        List * result = cons(copy(xs -> data), init(copy_list(xs -> cons)));
+        free_list(xs);
+        return result;
+    }
+}
+
+Box * last(List * xs)
+{
+    if (xs -> nil) {                    // 0
+        perror("last on empty list");
+        free_list(xs);
+        return NULL;
+    } else if (xs -> cons -> nil) {     // 1
+        Box * result = copy(xs -> data);
+        free_list(xs);
+        return result;
+    } else {
+        Box * result = last(copy_list(xs -> cons));
+        free_list(xs);
+        return result;
+    }
+}
+
+
 List * append(List * xs, List * ys)
 {
     if (xs -> nil) {
@@ -201,11 +268,22 @@ void free_list(List * xs)
     }
 }
 
-void print_list(List * xs)
+void print_list_aux(List * xs)
 {
     if (xs -> nil) {
+        // prints nothing
+    } else if (xs -> cons -> nil) {
+        print(xs -> data);
     } else {
         print(xs -> data);
-        print_list(xs -> cons);
+        printf(", ");
+        print_list_aux(xs -> cons);
     }
+}
+
+void print_list(List * xs)
+{
+    printf("[");
+    print_list_aux(xs);
+    printf("]");
 }

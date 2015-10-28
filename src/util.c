@@ -1,4 +1,4 @@
-#include "ds.h"
+#include "util.h"
 #include "type.h"
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -20,22 +20,18 @@ Command * copy_command(Command * node)
 
 Command * parse_command(String * str)
 {
-    String * name;
-    List * args = nil();
-
+    str = trim(str);
     if (null_string(str)) {
-        name = string("");
+        free_string(str);
+        return command(string(""), nil());
     } else {
-        // name
-        char * p = strtok(str -> content," ");
-        name = string(p);
-        // args
-        while (p = strtok(NULL, " "), p != NULL) {
-            args = snoc(args, box_str(p));
-        }
+        List * tokens = tokenize(str , string(" "));
+        List * tokens_ = copy_list(tokens);
+        // free_list(tokens);
+        String * name = unbox(head(tokens));
+        List * args = tail(tokens_);
+        return command(name, args);
     }
-    free_string(str);
-    return command(name, args);
 }
 
 void free_command(Command * node)
@@ -166,20 +162,24 @@ Line * line(List * cmds, Bool redirect, int out, int err)
 //
 // void print_line(Line * node)
 // {
-//     print_list_cmd(node -> cmds);
-//     if (node -> redirect) {
-//         printf(" >");
-//     } else {
-//         if (node -> out != -1)
-//             printf(" |%d", node -> out);
-//         if (node -> err != -1)
-//             printf(" !%d", node -> err);
-//     }
-//     printf("\n");
+    // if (node -> redirect) {         // has ">"
+    //
+    // } else
+    // if (node -> redirect) {
+    // print_list(node -> cmds);
+    // if (node -> redirect) {
+    //     printf(" >");
+    // } else {
+    //     if (node -> out != -1)
+    //         printf(" |%d", node -> out);
+    //     if (node -> err != -1)
+    //         printf(" !%d", node -> err);
+    // }
+    // printf("\n");
 // }
-//
-// void free_line(Line * node)
-// {
-//     free_list_cmd(node -> cmds);
-//     free(node);
-// }
+
+void free_line(Line * node)
+{
+    free_list(node -> cmds);
+    free(node);
+}

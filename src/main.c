@@ -6,7 +6,7 @@
 #include <netinet/ip.h>
 #include <strings.h>
 
-#include "ds.h"
+#include "util.h"
 #include "type.h"
 
 #define LINEBUFSIZE 16384
@@ -122,16 +122,48 @@ void create_server(int port_number, void (*callback)(int))
 
 int main(int argc, char *argv[])
 {
+    // String * s = string("a | b | d | c |3 d");
+    // String * t = string(" | ");
+    // List * l = tokenize(s, t);
+    // print_list(l);
+    //
+    // String * a = unbox(head(l));
+    // print_string(a);
+    // free_string(a);
+
+
+    // free_list(l);
+
+
+    // Pair * l = rsplit(s, t);
+    // print_pair(l);
+    // free_pair(l);
+
+    String * s = string("");
+    Command * c = parse_command(s);
+    print_command(c);
+    free_command(c);
+
+
+    // String * t = string(" | ");
+    // Box * l = last(tokenize(s, t));
+    // print(l);
+    // destruct(l);
+    //
+    // List * l = tokenize(s, t);
+    // print_list(l);
+    // free_list(l);
+
     // create_server(7000, child);
 
-    // List * l = cons(box_str("Apple"), cons(box_str("Orange"), nil()));
+    // List * l = cons(box_chars("Apple"), cons(box_chars("Orange"), nil()));
     // List * g = copy_list(l);
     // print_list(l);
     // print_list(g);
     // free_list(l);
     // free_list(g);
 
-    // Box * s = box_str("hey");
+    // Box * s = box_chars("hey");
     // print(s);
     // Box * t = copy(s);
     // print(t);

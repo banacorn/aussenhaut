@@ -16,6 +16,7 @@ typedef struct Box {
 } Box;
 
 Box * box(void *, void (*)(void *), void * (*)(void *), void (*)(void *));
+void * unbox(Box *);
 Box * copy(Box *);
 void destruct(Box *);
 void print(Box *);
@@ -75,6 +76,11 @@ List * nil();
 List * cons(Box *, List *);
 List * snoc(List *, Box *);
 List * copy_list(List *);
+
+Box * head(List *);
+List * tail(List *);
+List * init(List *);
+Box * last(List *);
 
 List * append(List *, List *);
 List * reverse(List *);
