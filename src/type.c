@@ -290,10 +290,10 @@ void * last(List * xs)
         perror("last on empty list");
         return NULL;
     } else if (xs -> Cons -> Nil) {     // 1
-        Box * result = copy(xs -> data);
+        void * result = unbox(copy(xs -> data));
         return result;
     } else {
-        return unbox(last(copy_list(xs -> Cons)));
+        return last(xs -> Cons);
     }
 }
 
@@ -330,6 +330,25 @@ List * map(Box *(*f)(Box *), List * xs)
         Box * val = f(xs -> data);
         free(xs);
         return cons(val, result);
+    }
+}
+
+List * filter(Bool (*f)(Box *), List * xs)
+{
+    if (xs -> Nil) {
+        return xs;
+    } else {
+        List * result = filter(f, xs -> Cons);
+        if (f(xs -> data)) {
+            Box * val = copy(xs -> data);
+            destruct(xs -> data);
+            free(xs);
+            return cons(val, result);
+        } else {
+            destruct(xs -> data);
+            free(xs);
+            return result;
+        }
     }
 }
 
@@ -376,4 +395,9 @@ void print_list(List * xs)
     printf("[");
     print_list_aux(xs);
     printf("]");
+}
+
+Box * box_list(List * xs)
+{
+    return box(xs, (void (*)(void *))free_list, (void * (*)(void *))copy_list, (void (*)(void *))print_list);
 }

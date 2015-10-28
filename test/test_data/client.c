@@ -77,7 +77,7 @@ int main(int argc,char *argv[])
 
   if( gSc ==1)
   {
-  	//°emeesage
+  	//ï¿½emeesage
   	len = readline(fileno(fp),msg_buf,sizeof(msg_buf));
   	if(len < 0) exit(1);
   	
@@ -104,7 +104,7 @@ int main(int argc,char *argv[])
   }
   if(FD_ISSET(client_fd,&readfds))
   {
-	  //±µ¦¬message
+	  //ï¿½ï¿½ï¿½ï¿½message
 	  int errnum;
 	  errnum =recv_msg(client_fd);
 	  if(errnum <0)

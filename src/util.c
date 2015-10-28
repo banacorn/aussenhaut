@@ -25,7 +25,7 @@ Command * parse_command(String * str)
         free_string(str);
         return command(string(""), nil());
     } else {
-        List * tokens = tokenize(str , string(" "));
+        List * tokens = compact(tokenize(str , string(" ")));
         String * name = head(tokens);
         List * args = tail(tokens);
         free_list(tokens);
@@ -76,29 +76,143 @@ Line * line(List * cmds, Bool redirect, String * target, int out, int err)
     return node;
 }
 
-// String -> Maybe (String, String)
-Maybe * parse_redirected(String * str)
-{
-    str = trim(str);
-    Pair * splitted = rsplit(str, string(" > "));
-    List * snd_part = tokenize(snd(splitted), string(" "));
-    String * first_part = fst(splitted);
-    free_pair(splitted);
-    if (length(snd_part) == 1) {
-        String * last_str = head(snd_part);
-        free_list(snd_part);
-        return just(box_pair(pair(box_str(first_part), box_str(last_str))));
-    } else {
-        free_string(first_part);
-        free_list(snd_part);
-        return nothing();
-    }
-}
-
 Box * parse_command_boxed(Box * data)
 {
     return box_cmd(parse_command(unbox(data)));
 }
+
+// String -> Maybe (List Command, String)
+Maybe * parse_redirection(String * str)
+{
+    str = trim(str);
+    Pair * splitted = rsplit(str, string(" > "));
+    String * first_part = fst(splitted);
+    String * second_part = snd(splitted);
+
+    if (null_string(first_part)) {  // no " > "
+        free_string(first_part);
+        free_string(second_part);
+        free_pair(splitted);
+        return nothing();
+    } else {                        // has " > "
+        List * snd_part_cmds = compact(tokenize(second_part, string(" ")));
+        if (length(snd_part_cmds) == 1) {   // OK
+            String * last_str = head(snd_part_cmds);
+            List * commands = map(parse_command_boxed, tokenize(first_part, string(" | ")));
+            free_list(snd_part_cmds);
+            free_pair(splitted);
+            return just(box_pair(pair(box_list(commands), box_str(last_str))));
+        } else {
+            free_list(snd_part_cmds);
+            free_string(first_part);
+            free_pair(splitted);
+            return nothing();
+        }
+    }
+}
+
+// String -> Int
+int parse_numbered_pipe(String * str)
+{
+    int result = -1;
+    String * head = take_string(str, 1);
+    String * tail = drop_string(str, 1);
+    String * pipe = string("|");
+
+    if (compare_string(head, pipe) && numeral(tail)) {
+        result = to_int(tail);
+    } else {
+        free_string(tail);
+    }
+    free_string(head);
+    free_string(pipe);
+    free_string(str);
+    return result;
+}
+
+// String -> Int
+int parse_numbered_bang(String * str)
+{
+    int result = -1;
+    String * head = take_string(str, 1);
+    String * tail = drop_string(str, 1);
+    String * bang = string("!");
+
+    if (compare_string(head, bang) && numeral(tail)) {
+        result = to_int(tail);
+    } else {
+        free_string(tail);
+    }
+    free_string(head);
+    free_string(bang);
+    free_string(str);
+    return result;
+}
+
+// String -> Maybe (List Command, (Int, Int))
+Maybe * parse_piping(String * str)
+{
+    int numbered_pipe = 0;
+    int out = -1;
+    int err = -1;
+
+    // preprocess
+    str = trim(str);
+    List * tokens = compact(tokenize(copy_string(str), string(" ")));
+
+
+    String * last_str = last(tokens);
+    int is_pipe = parse_numbered_pipe(copy_string(last_str));
+    int is_bang = parse_numbered_pipe(copy_string(last_str));
+
+    // printf("|%d\n", );
+    // printf("!%d\n", parse_numbered_bang(copy_string(last_str)));
+
+    // printf("[%s]\n", last_str -> content);
+    // String * num = drop_string(last_str, 1);
+    // printf("[%d]\n", numeral(num));
+    // free_string(num);
+
+    free_string(last_str);
+    print_list(tokens);
+    free_list(tokens);
+
+    //
+    // // Case 1: |n !n
+    // Pair * p0 = rsplit(copy_string(str), string(" !"));
+    // Pair * p1 = rsplit(trim(fst(p0)), string(" |"));
+    // String * s0 = snd(p0);
+    // String * s1 = snd(p1);
+    // if (numeral(s0) && numeral(s1)) {
+    //     printf("|%d !%d\n", to_int(s1), to_int(s0));
+    //     free_pair(p0);
+    //     free_pair(p1);
+    // }
+    //
+    // // Case 1: !n |n
+    // Pair * p2 = rsplit(copy_string(str), string(" |"));
+    // Pair * p3 = rsplit(trim(fst(p2)), string(" !"));
+    // String * s2 = snd(p2);
+    // String * s3 = snd(p3);
+    // if (numeral(s2) && numeral(s3)) {
+    //     printf("!%d |%d\n", to_int(s2), to_int(s3));
+    //     free_pair(p2);
+    //     free_pair(p3);
+    // }
+
+
+
+    // // after splitted, the second part must contain only numbers
+
+
+    // cleanup
+    // print_pair(splitted0);
+    // free_pair(splitted0);
+
+    free_string(str);
+    return nothing();
+}
+
 
 Line * parse_line(String * str)
 {
@@ -111,42 +225,34 @@ Line * parse_line(String * str)
     print_string(str);
     printf("\n");
 
-    Maybe * result_redirected = parse_redirected(str);
-    if (result_redirected -> Nothing == FALSE) {    // redirected
-        Pair * splitted = from_just(result_redirected);
-        List * commands = map(parse_command_boxed, tokenize(fst(splitted), string(" | ")));
-        String * target = snd(splitted);
-
-        Line * result = line(commands, TRUE, target, -1, -1);
+    Maybe * result_redirection = parse_redirection(copy_string(str));
+    if (result_redirection -> Nothing == FALSE) {    // redirected
+        Pair * splitted = from_just(result_redirection);
+        Line * result = line(fst(splitted), TRUE, snd(splitted), -1, -1);
 
         // cleanup
         free_pair(splitted);
-        free_maybe(result_redirected);
-
+        free_maybe(result_redirection);
+        free_string(str);
         return result;
     } else {
-        // not redirected
-        // print_maybe(result_redirected);
-        free_maybe(result_redirected);
+
+        printf("=== parsed piping shit ===\n");
+        Maybe * result_piping = parse_piping(str);
+        print_maybe(result_piping);
+        printf("\n");
+
+
+        // cleanup
+        free_maybe(result_piping);
+        free_maybe(result_redirection);
+
+        return line(nil(), redirect, string(""), out, err);
     }
-    // printf("\n");
-
-    // see if redirected
-
-    // Bool has_both_parts = !null_string(fst(splitted))
-    // Bool the_2nd_part_has_1_command = !null_string(fst(splitted))
-    // Bool the_2nd_part_has_no_args = !null_string(fst(splitted))
-    // printf("=== the rest of the line ===\n");
-    // Line * rest_line = parse_line(snd(p));
-    // parse_line(rest_line);
-    // free_line(rest_line);
-    // printf("\n");
-    // // printf("arg length of the last command%d\n", arg_length(unbox(p)));
-
-
-
-    return line(nil(), redirect, string(""), out, err);
 }
+
+
+
 //     String * str = trim(raw_str);
 //     ListCmd * cmds = nil_cmd();
 //     int numbered_pipe = 0;

@@ -28,9 +28,42 @@ String * copy_string(String * str)
     return string(str -> content);
 }
 
+String * take_string(String * xs, int n)
+{
+    return substring(xs, 0, n);
+}
+
+String * drop_string(String * xs, int n)
+{
+    return substring(xs, n, string_length(xs));
+}
+
 Bool compare_string(String * a, String * b)
 {
     return (Bool)(strcmp(a -> content, b -> content) == 0);
+}
+
+int to_int(String * str)
+{
+    int result = atoi(str -> content);
+    free_string(str);
+    return result;
+}
+
+Bool numeral(String * str)
+{
+    if (null_string(str)) {
+        return FALSE;
+    } else {
+        Bool result = TRUE;
+        int i = 0;
+        char * ref = str -> content;
+        while (i < string_length(str)) {
+            result = result && isdigit(ref[i]);
+            i++;
+        }
+        return result;
+    }
 }
 
 String * trim(String * str)
@@ -60,7 +93,7 @@ String * trim(String * str)
 Pair * split(String * str, String * sep)
 {
     if (string_length(str) < string_length(sep)) {
-        Pair * result = pair(box_str(str), box_chars(""));
+        Pair * result = pair(box_chars(""), box_str(str));
         free_string(sep);
         return result;
     } else {
@@ -83,7 +116,7 @@ Pair * split(String * str, String * sep)
             }
             cursor++;
         }
-        result = pair(box_str(str), box_chars(""));
+        result = pair(box_chars(""), box_str(str));
         free_string(sep);
         return result;
     }
@@ -150,6 +183,20 @@ List * tokenize(String * str, String * sep)
         return result;
     }
 }
+
+Bool non_null_string_boxed(Box * b)
+{
+    String * str = unbox(copy(b));
+    Bool result = !(null_string(str));
+    free_string(str);
+    return result;
+}
+
+List * compact(List * xs)
+{
+    return filter(non_null_string_boxed, xs);
+}
+
 
 String * substring(String * str, int from, int to)
 {

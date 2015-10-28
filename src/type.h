@@ -106,6 +106,7 @@ List * append(List *, List *);
 List * reverse(List *);
 
 List * map(Box *(*)(Box *), List *);
+List * filter(Bool (*)(Box *), List *);
 
 Bool null(List *);
 int length(List *);

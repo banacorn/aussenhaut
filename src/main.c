@@ -122,30 +122,17 @@ void create_server(int port_number, void (*callback)(int))
 
 int main(int argc, char *argv[])
 {
-    // String * s = string("a | b | d | c |3 d");
-    // String * t = string(" | ");
-    // List * l = tokenize(s, t);
-    // print_list(l);
-    //
-    // String * a = head(l));
-    // print_string(a);
-    // free_string(a);
-
-
-    // free_list(l);
-
 
     // Pair * l = rsplit(s, t);
     // print_pair(l);
     // free_pair(l);
 
-    // String * s = string("a");
-    // Command * c = parse_command(s);
-    // print_command(c);
-    // free_command(c);
+    // String * a = string("a v c    cc");
+    // Command * b = parse_command(a);
+    // print_command(b);
+    // free_command(b);
 
-
-    String * s = string("a b | c d | sdae |2");
+    String * s = string("asdasd");
     Line * c = parse_line(s);
 
     printf("=== parsed line ===\n");
