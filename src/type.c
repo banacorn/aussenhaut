@@ -50,6 +50,14 @@ Pair * pair(Box * a, Box * b)
     return node;
 }
 
+void * fst(Pair * node) {
+    return unbox(copy(node -> fst));
+}
+
+void * snd(Pair * node) {
+    return unbox(copy(node -> snd));
+}
+
 Pair * copy_pair(Pair * old)
 {
     return pair(copy(old -> fst), copy(old -> snd));
@@ -64,8 +72,11 @@ void free_pair(Pair * node)
 
 void print_pair(Pair * node)
 {
+    printf("( ");
     print(node -> fst);
+    printf(" , ");
     print(node -> snd);
+    printf(" )");
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -116,6 +127,60 @@ void print_either(Either * node)
     }
 }
 
+////////////////////////////////////////////////////////////////////////////////
+//  Maybe
+////////////////////////////////////////////////////////////////////////////////
+
+// typedef struct Maybe {
+//     Bool Nothing;   // TRUE if Nothing, FALSE, if Just
+//     Box * Just;
+// } Maybe;
+
+Maybe * nothing()
+{
+    Maybe * node = malloc(sizeof(Maybe));
+    node -> Nothing = TRUE;
+    node -> Just = NULL;
+    return node;
+}
+
+Maybe * just(Box * b)
+{
+    Maybe * node = malloc(sizeof(Maybe));
+    node -> Nothing = FALSE;
+    node -> Just = b;
+    return node;
+}
+
+void * from_just(Maybe * node)
+{
+    if (node -> Nothing) {
+        perror("from Nothing");
+        return NULL;
+    } else {
+        return unbox(copy(node -> Just));
+    }
+}
+
+void print_maybe(Maybe * node)
+{
+    if (node -> Nothing) {
+        printf("Nothing ");
+    } else {
+        printf("Just ");
+        print(node -> Just);
+    }
+}
+
+void free_maybe(Maybe * node)
+{
+    if (node -> Nothing) {
+        free(node);
+    } else {
+        destruct(node -> Just);
+        free(node);
+    }
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 //  List
@@ -164,11 +229,9 @@ Box * head(List * xs)
 {
     if (xs -> nil) {
         perror("head on empty list");
-        free_list(xs);
         return NULL;
     } else {
         Box * result = copy(xs -> data);
-        free_list(xs);
         return result;
     }
 }
@@ -177,11 +240,9 @@ List * tail(List * xs)
 {
     if (xs -> nil) {
         perror("tail on empty list");
-        free_list(xs);
         return NULL;
     } else {
         List * result = copy_list(xs -> cons);
-        free_list(xs);
         return result;
     }
 }
@@ -190,14 +251,11 @@ List * init(List * xs)
 {
     if (xs -> nil) {                    // 0
         perror("init on empty list");
-        free_list(xs);
         return NULL;
     } else if (xs -> cons -> nil) {     // 1
-        free_list(xs);
         return nil();
     } else {
         List * result = cons(copy(xs -> data), init(copy_list(xs -> cons)));
-        free_list(xs);
         return result;
     }
 }
@@ -206,15 +264,12 @@ Box * last(List * xs)
 {
     if (xs -> nil) {                    // 0
         perror("last on empty list");
-        free_list(xs);
         return NULL;
     } else if (xs -> cons -> nil) {     // 1
         Box * result = copy(xs -> data);
-        free_list(xs);
         return result;
     } else {
         Box * result = last(copy_list(xs -> cons));
-        free_list(xs);
         return result;
     }
 }

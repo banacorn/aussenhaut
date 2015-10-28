@@ -139,11 +139,19 @@ int main(int argc, char *argv[])
     // print_pair(l);
     // free_pair(l);
 
-    String * s = string("");
-    Command * c = parse_command(s);
-    print_command(c);
-    free_command(c);
+    // String * s = string("a");
+    // Command * c = parse_command(s);
+    // print_command(c);
+    // free_command(c);
 
+
+    String * s = string("a b | c d > e");
+    Line * c = parse_line(s);
+
+    printf("=== parsed line ===\n");
+    print_line(c);
+    printf("\n");
+    free_line(c);
 
     // String * t = string(" | ");
     // Box * l = last(tokenize(s, t));

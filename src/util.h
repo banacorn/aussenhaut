@@ -16,6 +16,7 @@ typedef struct Command {
 Command * command(String * name, List * args);
 Command * parse_command(String * str);
 Command * copy_command(Command *);
+int arg_length(Command *);
 void free_command(Command * node);
 void print_command(Command * node);
 
@@ -30,9 +31,9 @@ typedef struct Line {
     int err;        // !
 } Line;
 
-// Line * line(ListCmd *, Bool, int, int);
-// Line * parse_line(String *);
-// Line * copy_line(Line *);
+Line * line(List *, Bool, int, int);
+Line * parse_line(String *);
+Line * copy_line(Line *);
 void print_line(Line *);
 void free_line(Line *);
 

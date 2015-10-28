@@ -31,6 +31,8 @@ typedef struct Pair {
 } Pair;
 
 Pair * pair(Box *, Box *);
+void * fst(Pair *);
+void * snd(Pair *);
 Pair * copy_pair(Pair *);
 void free_pair(Pair *);
 void print_pair(Pair *);
@@ -52,8 +54,6 @@ void free_either(Either *);
 void print_either(Either *);
 
 
-
-
 ////////////////////////////////////////////////////////////////////////////////
 //  Bool
 ////////////////////////////////////////////////////////////////////////////////
@@ -61,6 +61,22 @@ void print_either(Either *);
 typedef unsigned int Bool;
 #define TRUE 1
 #define FALSE 0
+
+////////////////////////////////////////////////////////////////////////////////
+//  Maybe
+////////////////////////////////////////////////////////////////////////////////
+
+typedef struct Maybe {
+    Bool Nothing;   // TRUE if Nothing, FALSE, if Just
+    Box * Just;
+} Maybe;
+
+Maybe * nothing();
+Maybe * just(Box *);
+void * from_just(Maybe *);
+
+void print_maybe(Maybe *);
+void free_maybe(Maybe *);
 
 ////////////////////////////////////////////////////////////////////////////////
 //  List

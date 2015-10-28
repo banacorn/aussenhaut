@@ -26,12 +26,16 @@ Command * parse_command(String * str)
         return command(string(""), nil());
     } else {
         List * tokens = tokenize(str , string(" "));
-        List * tokens_ = copy_list(tokens);
-        // free_list(tokens);
         String * name = unbox(head(tokens));
-        List * args = tail(tokens_);
+        List * args = tail(tokens);
+        free_list(tokens);
         return command(name, args);
     }
+}
+
+int arg_length(Command * node)
+{
+    return length(node -> args);
 }
 
 void free_command(Command * node)
@@ -71,8 +75,39 @@ Line * line(List * cmds, Bool redirect, int out, int err)
     return node;
 }
 
-// Line * parse_line(String * raw_str)
-// {
+Line * parse_line(String * str)
+{
+    int numbered_pipe = 0;
+    Bool redirect = FALSE;
+    int out = -1;
+    int err = -1;
+    str = trim(str);
+    printf("=== input string ===\n");
+    print_string(str);
+    printf("\n");
+
+    // see if redirected
+    Pair * splitted = rsplit(str, string(" > "));
+
+    printf("=== splitted pair ===\n");
+    print_pair(splitted);
+    printf("\n");
+
+    // Bool has_both_parts = !null_string(fst(splitted))
+    // Bool the_2nd_part_has_1_command = !null_string(fst(splitted))
+    // Bool the_2nd_part_has_no_args = !null_string(fst(splitted))
+    // printf("=== the rest of the line ===\n");
+    // Line * rest_line = parse_line(snd(p));
+    // parse_line(rest_line);
+    // free_line(rest_line);
+    // printf("\n");
+    // // printf("arg length of the last command%d\n", arg_length(unbox(p)));
+    free_pair(splitted);
+
+
+
+    return line(nil(), redirect, out, err);
+}
 //     String * str = trim(raw_str);
 //     ListCmd * cmds = nil_cmd();
 //     int numbered_pipe = 0;
@@ -155,28 +190,34 @@ Line * line(List * cmds, Bool redirect, int out, int err)
 //     return line(cmds, redirect, out, err);
 // }
 //
-// Line * copy_line(Line * node)
-// {
-//     return line(copy_list_cmd(node -> cmds), node -> redirect, node -> out, node -> err);
-// }
-//
-// void print_line(Line * node)
-// {
-    // if (node -> redirect) {         // has ">"
-    //
-    // } else
-    // if (node -> redirect) {
-    // print_list(node -> cmds);
-    // if (node -> redirect) {
-    //     printf(" >");
-    // } else {
-    //     if (node -> out != -1)
-    //         printf(" |%d", node -> out);
-    //     if (node -> err != -1)
-    //         printf(" !%d", node -> err);
-    // }
-    // printf("\n");
-// }
+Line * copy_line(Line * node)
+{
+    return line(copy_list(node -> cmds), node -> redirect, node -> out, node -> err);
+}
+
+void print_line(Line * node)
+{
+    if (node -> redirect) {         // has ">"
+        List * init_cmds = init(node -> cmds);
+        Command * last_cmd = unbox(last(node -> cmds));
+
+        print_list(init_cmds);
+        printf(" > ");
+        print_command(last_cmd);
+
+        free_list(init_cmds);
+        free_command(last_cmd);
+    } else {
+        print_list(node -> cmds);
+        if (!null(node -> cmds)) {
+            if (node -> out != -1)
+                printf(" |%d", node -> out);
+            if (node -> err != -1)
+                printf(" !%d", node -> err);
+        }
+    }
+    printf("\n");
+}
 
 void free_line(Line * node)
 {
