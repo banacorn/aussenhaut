@@ -14,28 +14,23 @@ const char * welcome_msg =
     "** Welcome to the information server. **\n"
     "****************************************\n";
 
-char * read_message(int socket)
+String * read_message(int socket)
 {
     char buffer[LINEBUFSIZE];
-    char * result;
-    int i = 0;
     ssize_t recv_result = recv(socket, buffer, LINEBUFSIZE, 0);
     if (recv_result < 0) {
         perror("recv error");
-        result = (char *)malloc(1);
-        result[0] = 0;
+        return string("");
     } else {
-        // remove /r/n and append /0
         buffer[recv_result - 2] = 0;
-        result = (char *)malloc(recv_result - 1);
-        strcpy(result, buffer);
+        return string(buffer);
     }
-    return result;
 }
 
-void send_message(int socket, char * message)
+void send_message(int socket, String * message)
 {
-    int send_result = send(socket, message, strlen(message), 0);
+    int send_result = send(socket, message -> content, string_length(message), 0);
+    free_string(message);
     if (send_result < 0) {
         perror("sending message");
     }
@@ -43,20 +38,20 @@ void send_message(int socket, char * message)
 
 void child(int socket)
 {
-    send_message(socket, (char *)welcome_msg);
+    send_message(socket, string((char *)welcome_msg));
 
     while (1) {
-        send_message(socket, "% ");
-        char * message = read_message(socket);
-        Line * line = parse_line(string(message));
+        send_message(socket, string("% "));
+        Line * line = parse_line(read_message(socket));
         print_line(line);
-        if (null_cmd(line -> cmds)) {
-            print_line(line);
+        if (null_cmd(line -> cmds)) {   // empty command
+            free_line(line);
         } else {
             if (strcmp("exit", line -> cmds -> data -> name -> content) == 0) {
                 free_line(line);
                 break;
-            } else {
+            } else if (strcmp("printenv", line -> cmds -> data -> name -> content) == 0) {
+                // printf("%s\n", );
                 free_line(line);
             }
         }
@@ -99,7 +94,6 @@ void create_server(int port_number, void (*callback)(int))
 
     // non-stop accepting
     while (1) {
-
         socklen_t client_length = sizeof(client_address);
         int client_socket_fd = accept(socket_fd, (struct sockaddr *) &client_address, &client_length);
         if (client_socket_fd < 0) {
@@ -122,7 +116,6 @@ void create_server(int port_number, void (*callback)(int))
 
     close(socket_fd);
 }
-
 
 
 int main(int argc, char *argv[])

@@ -425,9 +425,13 @@ void print_list_cmd(ListCmd * xs)
 {
     if (xs -> nil) {
     } else if (xs -> cons -> nil) {
+        printf("[");
         print_command(xs -> data);
+        printf("]");
     } else {
+        printf("[");
         print_command(xs -> data);
+        printf("]");
         printf(" | ");
         print_list_cmd(xs -> cons);
     }
@@ -437,10 +441,11 @@ void print_list_cmd(ListCmd * xs)
 //  Line
 ////////////////////////////////////////////////////////////////////////////////
 
-Line * line(ListCmd * cmds, int out, int err)
+Line * line(ListCmd * cmds, Bool redirect, int out, int err)
 {
     Line * node = malloc(sizeof(Line));
     node -> cmds = cmds;
+    node -> redirect = redirect;
     node -> out = out;
     node -> err = err;
     return node;
@@ -451,15 +456,16 @@ Line * parse_line(String * raw_str)
     String * str = trim(raw_str);
     ListCmd * cmds = nil_cmd();
     int numbered_pipe = 0;
+    Bool redirect = FALSE;
     int out = -1;
     int err = -1;
 
     if (string_length(str) == 0) {
         free_string(str);
-        return line(cmds, out, err);
+        return line(cmds, redirect, out, err);
     } else if (string_length(str) == 1) {
         cmds = cons_cmd(parse_command(str), cmds);
-        return line(cmds, out, err);
+        return line(cmds, redirect, out, err);
     }
 
     // has numbered pipe at the end?
@@ -522,24 +528,29 @@ Line * parse_line(String * raw_str)
         }
     }
 
+    // see if there's redirection ">" in the last 2 commands
     Command * cmd = parse_command(substring(str, offset, i + 2));
     cmds = snoc_cmd(cmds, cmd);
     free_string(str);
-    return line(cmds, out, err);
+    return line(cmds, redirect, out, err);
 }
 
 Line * copy_line(Line * node)
 {
-    return line(copy_list_cmd(node -> cmds), node -> out, node -> err);
+    return line(copy_list_cmd(node -> cmds), node -> redirect, node -> out, node -> err);
 }
 
 void print_line(Line * node)
 {
     print_list_cmd(node -> cmds);
-    if (node -> out != -1)
-        printf(" |%d", node -> out);
-    if (node -> err != -1)
-        printf(" !%d", node -> err);
+    if (node -> redirect) {
+        printf(" >");
+    } else {
+        if (node -> out != -1)
+            printf(" |%d", node -> out);
+        if (node -> err != -1)
+            printf(" !%d", node -> err);
+    }
     printf("\n");
 }
 

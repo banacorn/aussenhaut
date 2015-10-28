@@ -125,11 +125,12 @@ void free_list_cmd(ListCmd * xs);
 
 typedef struct Line {
     ListCmd * cmds;
-    int out;
-    int err;
+    Bool redirect;   // >
+    int out;        // |
+    int err;        // !
 } Line;
 
-Line * line(ListCmd *, int, int);
+Line * line(ListCmd *, Bool, int, int);
 Line * parse_line(String *);
 Line * copy_line(Line *);
 void print_line(Line *);

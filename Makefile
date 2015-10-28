@@ -8,7 +8,7 @@ go:
 
 check:
 	@ make go
-	@ valgrind ./build/main --track-origins=yes --leak-check=full
+	@ valgrind --leak-check=full --track-origins=yes ./build/main 
 
 clean:
 	@ rm -f main
