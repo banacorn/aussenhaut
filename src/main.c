@@ -49,7 +49,7 @@ void child(int socket)
 
 int main(int argc, char *argv[])
 {
-    // create_server(7000, child);
+    create_server(7000, child);
 
     // Env * d = nil_env();
     // Env * d = cons_env(string("PATH"), string("bin::."), cons_env(string("b"), string("1"), nil_env()));
