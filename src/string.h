@@ -27,6 +27,7 @@ List * tokenize(String *, String *);
 List * compact(List *);
 String * append_string(String *, String *);
 String * concat_string(List *);
+String * intercalate_string(List *, String *);
 String * substring(String * str, int, int); // allocates new spaces
 size_t string_length(String * str);
 size_t string_size(String * str);   // memory size

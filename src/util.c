@@ -1,6 +1,7 @@
 #include "util.h"
 #include "type.h"
 
+
 ////////////////////////////////////////////////////////////////////////////////
 //  Command
 ////////////////////////////////////////////////////////////////////////////////
@@ -60,6 +61,7 @@ Box * box_cmd(Command * cmd)
 {
     return box(cmd, (void (*)(void *))free_command, (void * (*)(void *))copy_command, (void (*)(void *))print_command);
 }
+
 
 ////////////////////////////////////////////////////////////////////////////////
 //  Line
@@ -149,87 +151,65 @@ int parse_numbered_bang(String * str)
     return result;
 }
 
-// String -> Maybe {String, Int, Int}
-Maybe * parse_piping(String * str)
+// String -> Line
+Line * parse_piping(String * str)
 {
-    Maybe * result = NULL;
-    int numbered_pipe = 0;
-    int out = -1;
-    int err = -1;
-
     // preprocess
     str = trim(str);
-    List * tokens = compact(tokenize(copy_string(str), string(" ")));
 
+    List * tokens = compact(tokenize(str, string(" ")));
     if (length(tokens) >= 2) {
         String * last_str = last(tokens);
         List * temp_init = init(tokens);
         String * snd_last_str = last(temp_init);
-
+        free_list(temp_init);
         int last_is_pipe = parse_numbered_pipe(copy_string(last_str));
-        int last_is_bang = parse_numbered_bang(copy_string(last_str));
+        int last_is_bang = parse_numbered_bang(last_str);
 
         int snd_last_is_pipe = parse_numbered_pipe(copy_string(snd_last_str));
-        int snd_last_is_bang = parse_numbered_bang(copy_string(snd_last_str));
+        int snd_last_is_bang = parse_numbered_bang(snd_last_str);
 
         if (snd_last_is_bang > -1 && last_is_pipe > -1) { // !N |N
-            printf("!%d |%d\n", snd_last_is_bang, last_is_pipe);
-            struct {
-                String * str;
-                int out;
-                int err;
-            } package;
-
-            print_list(init(temp_init));
-            // package.str = substring(str, 0, )
-
-            // result = just();
-            result = nothing();
+            List * temp_init = init(tokens);
+            String * cmds_str = intercalate_string(init(temp_init), string(" "));
+            List * cmds = map(parse_command_boxed, tokenize(cmds_str, string(" | ")));
+            free_list(temp_init);
+            free_list(tokens);
+            return line(cmds, FALSE, string(""), last_is_pipe, snd_last_is_bang);
         } else if (snd_last_is_pipe > -1 && last_is_bang > -1) { // |N !N
-            printf("|%d !%d\n", snd_last_is_pipe, last_is_bang);
-            result = nothing();
+            List * temp_init = init(tokens);
+            String * cmds_str = intercalate_string(init(temp_init), string(" "));
+            List * cmds = map(parse_command_boxed, tokenize(cmds_str, string(" | ")));
+            free_list(temp_init);
+            free_list(tokens);
+            return line(cmds, FALSE, string(""), snd_last_is_pipe, last_is_bang);
         } else if (last_is_bang > -1) { // !N
-            print_list(temp_init);
-            printf("!%d\n", last_is_bang);
-            result = nothing();
+            String * cmds_str = intercalate_string(init(tokens), string(" "));
+            List * cmds = map(parse_command_boxed, tokenize(cmds_str, string(" | ")));
+            free_list(tokens);
+            return line(cmds, FALSE, string(""), -1, last_is_bang);
         } else if (last_is_pipe > -1) { // |N
-            print_list(temp_init);
-            printf("|%d\n", last_is_pipe);
-            result = nothing();
-            // res
+            String * cmds_str = intercalate_string(init(tokens), string(" "));
+            List * cmds = map(parse_command_boxed, tokenize(cmds_str, string(" | ")));
+            free_list(tokens);
+            return line(cmds, FALSE, string(""), last_is_pipe, -1);
         } else  { // nothing
-            print_list(tokens);
-            printf("NOPE\n");
-            result = nothing();
+            String * cmds_str = intercalate_string(tokens, string(" "));
+            List * cmds = map(parse_command_boxed, tokenize(cmds_str, string(" | ")));
+            return line(cmds, FALSE, string(""), -1, -1);
         }
 
-
-        free_list(temp_init);
-        free_string(last_str);
-        free_string(snd_last_str);
-
     } else {
-        result = nothing();
+        List * cmds = map(parse_command_boxed, tokenize(head(tokens), string(" | ")));
+        free_list(tokens);
+        return line(cmds, FALSE, string(""), -1, -1);
     }
-
-    print_list(tokens);
-    free_list(tokens);
-
-    free_string(str);
-    return result;
 }
 
 
 Line * parse_line(String * str)
 {
-    int numbered_pipe = 0;
-    Bool redirect = FALSE;
-    int out = -1;
-    int err = -1;
     str = trim(str);
-    printf("=== input string ===\n");
-    print_string(str);
-    printf("\n");
 
     Maybe * result_redirection = parse_redirection(copy_string(str));
     if (result_redirection -> Nothing == FALSE) {    // redirected
@@ -242,105 +222,11 @@ Line * parse_line(String * str)
         free_string(str);
         return result;
     } else {
-
-        printf("=== parsed piping shit ===\n");
-        Maybe * result_piping = parse_piping(str);
-        print_maybe(result_piping);
-        printf("\n");
-
-
-        // cleanup
-        free_maybe(result_piping);
         free_maybe(result_redirection);
-
-        return line(nil(), redirect, string(""), out, err);
+        return parse_piping(str);
     }
 }
 
-
-
-//     String * str = trim(raw_str);
-//     ListCmd * cmds = nil_cmd();
-//     int numbered_pipe = 0;
-//     Bool redirect = FALSE;
-//     int out = -1;
-//     int err = -1;
-//
-//     if (string_length(str) == 0) {
-//         free_string(str);
-//         return line(cmds, redirect, out, err);
-//     } else if (string_length(str) == 1) {
-//         cmds = cons_cmd(parse_command(str), cmds);
-//         return line(cmds, redirect, out, err);
-//     }
-//
-//     // has numbered pipe at the end?
-//     char * end = str -> content + string_length(str) - 1;
-//     if (isdigit(*end)) {
-//         while (end > str -> content && isdigit(*end)) end--;
-//         if (*(end - 1) == ' ' && *end == '|') {
-//             out = atoi(end + 1);
-//             numbered_pipe++;
-//         } else if (*(end - 1) == ' ' && *end == '!') {
-//             err = atoi(end + 1);
-//             numbered_pipe++;
-//         }
-//     }
-//
-//
-//     // upon discovery, fill the parsed part with spaces
-//     if (numbered_pipe == 1) {
-//         while(end < str -> content + string_length(str)) {
-//             *end = ' ';
-//             end++;
-//         }
-//         str = trim(str);
-//     }
-//
-//     // has numbered pipe at the end?
-//     end = str -> content + string_length(str) - 1;
-//     if (isdigit(*end)) {
-//         while (end > str -> content && isdigit(*end)) end--;
-//         if (*(end - 1) == ' ' && *end == '|' && out == -1) {
-//             out = atoi(end + 1);
-//             numbered_pipe++;
-//         } else if (*(end - 1) == ' ' && *end == '!' && err == -1) {
-//             err = atoi(end + 1);
-//             numbered_pipe++;
-//         }
-//     }
-//
-//     // upon discovery, fill the parsed part with spaces
-//     if (numbered_pipe == 2) {
-//         while(end < str -> content + string_length(str)) {
-//             *end = ' ';
-//             end++;
-//         }
-//         str = trim(str);
-//     }
-//
-//     // seperating input with " | " and cons the substring before it
-//     int offset = 0;
-//     int i = 0;
-//     char * ref = str -> content;
-//     while (i + 2 < string_length(str)) {
-//         if (ref[i] == ' ' && ref[i + 1] == '|' && ref[i + 2] == ' ') {
-//             // found!
-//             Command * cmd = parse_command(substring(str, offset, i));
-//             cmds = snoc_cmd(cmds, cmd);
-//             offset = i = i + 3;
-//         } else {
-//             i++;
-//         }
-//     }
-//
-//     // see if there's redirection ">" in the last 2 commands
-//     Command * cmd = parse_command(substring(str, offset, i + 2));
-//     cmds = snoc_cmd(cmds, cmd);
-//     free_string(str);
-//     return line(cmds, redirect, out, err);
-// }
-//
 Line * copy_line(Line * node)
 {
     return line(copy_list(node -> cmds), node -> redirect, node -> target, node -> out, node -> err);
@@ -367,6 +253,7 @@ void print_line(Line * node)
 void free_line(Line * node)
 {
     free_list(node -> cmds);
-    free_string(node -> target);
+    if (node -> target)
+        free_string(node -> target);
     free(node);
 }

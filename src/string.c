@@ -231,6 +231,25 @@ String * concat_string(List * xs)
     }
 }
 
+String * intercalate_string(List * xs, String * sep)
+{
+    if (xs -> Nil) {
+        free_list(xs);
+        return string("");
+    } else if (xs -> Cons -> Nil) {
+        String * result = unbox(copy(xs -> data));
+        free_list(xs);
+        free_string(sep);
+        return result;
+    } else {
+        String * result = intercalate_string(xs -> Cons, copy_string(sep));
+        result = append_string(sep, result);
+        result = append_string(unbox(xs -> data), result);
+        free(xs);
+        return result;
+    }
+}
+
 String * substring(String * str, int from, int to)
 {
     if (from > to) {
