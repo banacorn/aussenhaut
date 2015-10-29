@@ -6,7 +6,7 @@
 #include <netinet/ip.h>
 #include <strings.h>
 
-#include "util.h"
+#include "parser.h"
 #include "type.h"
 
 #define LINEBUFSIZE 16384
@@ -44,19 +44,22 @@ void child(int socket)
 
     while (1) {
         send_message(socket, string("% "));
-        // Line * line = parse_line(read_message(socket));
-        // print_line(line);
-        // if (null_cmd(line -> cmds)) {   // empty command
-        //     free_line(line);
-        // } else {
-        //     if (strcmp("exit", line -> cmds -> data -> name -> content) == 0) {
-        //         free_line(line);
-        //         break;
-        //     } else if (strcmp("printenv", line -> cmds -> data -> name -> content) == 0) {
-        //         // printf("%s\n", );
-        //         free_line(line);
-        //     }
-        // }
+        Line * line = parse_line(read_message(socket));
+        print_line(line);
+        if (null(line -> cmds)) {   // empty command
+            free_line(line);
+        } else {
+            Command * first_command = head(line -> cmds);
+            String * command_name = first_command -> name;
+            if (compare_string(string("exit"), command_name)) {
+                free_command(first_command);
+                free_line(line);
+                break;
+            } else {
+                free_command(first_command);
+                free_line(line);
+            }
+        }
     }
 }
 
@@ -122,63 +125,6 @@ void create_server(int port_number, void (*callback)(int))
 
 int main(int argc, char *argv[])
 {
-    // String * a = string("fuck");
-    // String * b = string("you");
-    // String * c = string("haha");
-    // List * l = cons(box_str(a), cons(box_str(b), cons(box_str(c), nil())));
-    // print_list(l);
-    // String * test = intercalate_string(l, string(" + "));
-    // printf("[%s]\n", test -> content);
-    // free_string(test);
-    // free_list(l);
-    // String * c = append_string(a, b);
-    // free_string(c);
-
-    // Pair * l = rsplit(s, t);
-    // print_pair(l);
-    // free_pair(l);
-
-    // String * a = string("a v c    cc");
-    // Command * b = parse_command(a);
-    // print_command(b);
-    // free_command(b);
-
-
-    String * s = string("e e | asd fsf | sdf !4 |3 !2");
-    Line * c = parse_line(s);
-
-    printf("=== parsed line ===\n");
-    print_line(c);
-    printf("\n");
-    free_line(c);
-
-    // String * t = string(" | ");
-    // Box * l = last(tokenize(s, t));
-    // print(l);
-    // destruct(l);
-    //
-    // List * l = tokenize(s, t);
-    // print_list(l);
-    // free_list(l);
-
-    // create_server(7000, child);
-
-    // List * l = cons(box_chars("Apple"), cons(box_chars("Orange"), nil()));
-    // List * g = copy_list(l);
-    // print_list(l);
-    // print_list(g);
-    // free_list(l);
-    // free_list(g);
-
-    // Box * s = box_chars("hey");
-    // print(s);
-    // Box * t = copy(s);
-    // print(t);
-    // destruct(s);
-    // destruct(t);
-
-    // Line * l = parse_line(string(""));
-    // print_line(l);
-    // free_line(l);
+    create_server(7000, child);
     return 0;
 }

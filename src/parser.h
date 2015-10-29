@@ -1,5 +1,5 @@
-#ifndef UTIL_H_
-#define UTIL_H_
+#ifndef PARSER_H_
+#define PARSER_H_
 
 #include "type.h"
 #include "string.h"
@@ -40,4 +40,4 @@ Line * copy_line(Line *);
 void print_line(Line *);
 void free_line(Line *);
 
-#endif // UTIL_H_
+#endif // PARSER_H_

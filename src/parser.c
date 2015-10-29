@@ -1,4 +1,4 @@
-#include "util.h"
+#include "parser.h"
 #include "type.h"
 
 
@@ -156,9 +156,8 @@ Line * parse_piping(String * str)
 {
     // preprocess
     str = trim(str);
-
     List * tokens = compact(tokenize(str, string(" ")));
-    if (length(tokens) >= 2) {
+    if (length(tokens) > 1) {
         String * last_str = last(tokens);
         List * temp_init = init(tokens);
         String * snd_last_str = last(temp_init);
@@ -194,15 +193,18 @@ Line * parse_piping(String * str)
             free_list(tokens);
             return line(cmds, FALSE, string(""), last_is_pipe, -1);
         } else  { // nothing
+
             String * cmds_str = intercalate_string(tokens, string(" "));
             List * cmds = map(parse_command_boxed, tokenize(cmds_str, string(" | ")));
             return line(cmds, FALSE, string(""), -1, -1);
         }
-
-    } else {
+    } else if (length(tokens) == 1) {
         List * cmds = map(parse_command_boxed, tokenize(head(tokens), string(" | ")));
         free_list(tokens);
         return line(cmds, FALSE, string(""), -1, -1);
+    } else {
+        free_list(tokens);
+        return line(nil(), FALSE, string(""), -1, -1);
     }
 }
 
@@ -210,7 +212,6 @@ Line * parse_piping(String * str)
 Line * parse_line(String * str)
 {
     str = trim(str);
-
     Maybe * result_redirection = parse_redirection(copy_string(str));
     if (result_redirection -> Nothing == FALSE) {    // redirected
         Pair * splitted = from_just(result_redirection);
