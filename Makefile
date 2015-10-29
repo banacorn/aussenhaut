@@ -11,4 +11,21 @@ check:
 	@ valgrind --leak-check=full --track-origins=yes ./build/main
 
 clean:
-	@ rm -f main
+	@ rm -f ./build/main
+
+setup-bin:
+	@ make clean-bin
+	@ mkdir -p ras/
+	@ mkdir -p ras/bin
+	@ cp /bin/ls ras/bin
+	@ cp /bin/cat ras/bin
+	@ make compile-bin
+
+clean-bin:
+	@ rm -f /ras
+
+compile-bin:
+	@ cc src/bin/noop.cpp -o ras/bin/noop
+	@ g++ src/bin/number.cpp -o ras/bin/number
+	@ cc src/bin/removetag.cpp -o ras/bin/removetag
+	@ cc src/bin/removetag0.cpp -o ras/bin/removetag0
