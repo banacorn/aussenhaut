@@ -122,6 +122,17 @@ void create_server(int port_number, void (*callback)(int))
 
 int main(int argc, char *argv[])
 {
+    // String * a = string("fuck");
+    // String * b = string("you");
+    // String * c = string("haha");
+    // List * l = cons(box_str(a), cons(box_str(b), cons(box_str(c), nil())));
+    // print_list(l);
+    // String * test = concat_string(l);
+    // printf("[%s]\n", test -> content);
+    // free_string(test);
+    // free_list(l);
+    // String * c = append_string(a, b);
+    // free_string(c);
 
     // Pair * l = rsplit(s, t);
     // print_pair(l);
@@ -132,13 +143,13 @@ int main(int argc, char *argv[])
     // print_command(b);
     // free_command(b);
 
-    String * s = string("asdasd");
-    Line * c = parse_line(s);
-
-    printf("=== parsed line ===\n");
-    print_line(c);
-    printf("\n");
-    free_line(c);
+    // String * s = string("e s fs !234 |1 ");
+    // Line * c = parse_line(s);
+    //
+    // printf("=== parsed line ===\n");
+    // print_line(c);
+    // printf("\n");
+    // free_line(c);
 
     // String * t = string(" | ");
     // Box * l = last(tokenize(s, t));

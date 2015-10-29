@@ -149,9 +149,10 @@ int parse_numbered_bang(String * str)
     return result;
 }
 
-// String -> Maybe (List Command, (Int, Int))
+// String -> Maybe {String, Int, Int}
 Maybe * parse_piping(String * str)
 {
+    Maybe * result = NULL;
     int numbered_pipe = 0;
     int out = -1;
     int err = -1;
@@ -160,57 +161,62 @@ Maybe * parse_piping(String * str)
     str = trim(str);
     List * tokens = compact(tokenize(copy_string(str), string(" ")));
 
+    if (length(tokens) >= 2) {
+        String * last_str = last(tokens);
+        List * temp_init = init(tokens);
+        String * snd_last_str = last(temp_init);
 
-    String * last_str = last(tokens);
-    int is_pipe = parse_numbered_pipe(copy_string(last_str));
-    int is_bang = parse_numbered_pipe(copy_string(last_str));
+        int last_is_pipe = parse_numbered_pipe(copy_string(last_str));
+        int last_is_bang = parse_numbered_bang(copy_string(last_str));
 
-    // printf("|%d\n", );
-    // printf("!%d\n", parse_numbered_bang(copy_string(last_str)));
+        int snd_last_is_pipe = parse_numbered_pipe(copy_string(snd_last_str));
+        int snd_last_is_bang = parse_numbered_bang(copy_string(snd_last_str));
 
-    // printf("[%s]\n", last_str -> content);
-    // String * num = drop_string(last_str, 1);
-    // printf("[%d]\n", numeral(num));
-    // free_string(num);
+        if (snd_last_is_bang > -1 && last_is_pipe > -1) { // !N |N
+            printf("!%d |%d\n", snd_last_is_bang, last_is_pipe);
+            struct {
+                String * str;
+                int out;
+                int err;
+            } package;
 
-    free_string(last_str);
+            print_list(init(temp_init));
+            // package.str = substring(str, 0, )
+
+            // result = just();
+            result = nothing();
+        } else if (snd_last_is_pipe > -1 && last_is_bang > -1) { // |N !N
+            printf("|%d !%d\n", snd_last_is_pipe, last_is_bang);
+            result = nothing();
+        } else if (last_is_bang > -1) { // !N
+            print_list(temp_init);
+            printf("!%d\n", last_is_bang);
+            result = nothing();
+        } else if (last_is_pipe > -1) { // |N
+            print_list(temp_init);
+            printf("|%d\n", last_is_pipe);
+            result = nothing();
+            // res
+        } else  { // nothing
+            print_list(tokens);
+            printf("NOPE\n");
+            result = nothing();
+        }
+
+
+        free_list(temp_init);
+        free_string(last_str);
+        free_string(snd_last_str);
+
+    } else {
+        result = nothing();
+    }
+
     print_list(tokens);
     free_list(tokens);
 
-    //
-    // // Case 1: |n !n
-    // Pair * p0 = rsplit(copy_string(str), string(" !"));
-    // Pair * p1 = rsplit(trim(fst(p0)), string(" |"));
-    // String * s0 = snd(p0);
-    // String * s1 = snd(p1);
-    // if (numeral(s0) && numeral(s1)) {
-    //     printf("|%d !%d\n", to_int(s1), to_int(s0));
-    //     free_pair(p0);
-    //     free_pair(p1);
-    // }
-    //
-    // // Case 1: !n |n
-    // Pair * p2 = rsplit(copy_string(str), string(" |"));
-    // Pair * p3 = rsplit(trim(fst(p2)), string(" !"));
-    // String * s2 = snd(p2);
-    // String * s3 = snd(p3);
-    // if (numeral(s2) && numeral(s3)) {
-    //     printf("!%d |%d\n", to_int(s2), to_int(s3));
-    //     free_pair(p2);
-    //     free_pair(p3);
-    // }
-
-
-
-    // // after splitted, the second part must contain only numbers
-
-
-    // cleanup
-    // print_pair(splitted0);
-    // free_pair(splitted0);
-
     free_string(str);
-    return nothing();
+    return result;
 }
 
 

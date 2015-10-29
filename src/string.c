@@ -197,6 +197,39 @@ List * compact(List * xs)
     return filter(non_null_string_boxed, xs);
 }
 
+String * append_string(String * xs, String * ys)
+{
+    // allocate space
+    String * result = malloc(sizeof(String));
+    result -> content = malloc(string_length(xs) + string_length(ys) + 1);
+
+    // copy
+    char * xs_ref = xs -> content;
+    char * ys_ref = ys -> content;
+    char * result_ref = result -> content;
+    memcpy(result_ref, xs_ref, string_size(xs));
+    memcpy(result_ref + string_length(xs), ys_ref, string_size(ys));
+    result_ref[string_length(xs) + string_length(ys)] = 0;
+
+    // cleanup
+    free_string(xs);
+    free_string(ys);
+
+    return result;
+}
+
+String * concat_string(List * xs)
+{
+    if (xs -> Nil) {
+        free_list(xs);
+        return string("");
+    } else {
+        String * result = concat_string(xs -> Cons);
+        result = append_string(unbox(xs -> data), result);
+        free(xs);
+        return result;
+    }
+}
 
 String * substring(String * str, int from, int to)
 {

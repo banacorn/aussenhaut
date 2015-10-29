@@ -279,7 +279,7 @@ List * init(List * xs)
     } else if (xs -> Cons -> Nil) {     // 1
         return nil();
     } else {
-        List * result = cons(copy(xs -> data), init(copy_list(xs -> Cons)));
+        List * result = cons(copy(xs -> data), init(xs -> Cons));
         return result;
     }
 }
