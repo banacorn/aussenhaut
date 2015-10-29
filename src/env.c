@@ -25,6 +25,15 @@ Env * cons_env(String * k , String * v, Env * xs)
     return node;
 }
 
+Env * copy_env(Env * xs)
+{
+    if (xs -> Nil) {
+        return nil_env();
+    } else {
+        return cons_env(copy_string(xs -> key), copy_string(xs -> val), copy_env(xs -> Cons));
+    }
+}
+
 Env * insert(Env * xs, String * k, String * v)
 {
     if (xs -> Nil) {                                // not found, insert
@@ -58,6 +67,29 @@ String * search(Env * xs, String * s)
     }
 }
 
+String * show_all_env(Env * xs)
+{
+    if (xs -> Nil) {
+        return string("");
+    } else {
+        String * result = show_all_env(xs -> Cons);
+        String * new_str = append_string(copy_string(xs -> key), string("="));
+        new_str = append_string(new_str, copy_string(xs -> val));
+        new_str = append_string(new_str, string("\n"));
+        new_str = append_string(new_str, result);
+        return new_str;
+    }
+}
+
+List * get_path(Env * xs)
+{
+    String * path_str = search(xs, string("PATH"));
+    if (path_str) {
+        return tokenize(path_str, string(":"));
+    } else {
+        return nil();
+    }
+}
 
 void free_env(Env * node)
 {

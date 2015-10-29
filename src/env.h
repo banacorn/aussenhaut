@@ -18,10 +18,13 @@ typedef struct Env {
 // constructor
 Env * nil_env();
 Env * cons_env(String *, String *, Env *);
+Env * copy_env(Env *);
 
 // operation
 Env * insert(Env *, String *, String *);
 String * search(Env *, String *);
+String * show_all_env(Env *);
+List * get_path(Env *);
 
 //
 void free_env(Env *);
