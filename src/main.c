@@ -63,10 +63,10 @@ void exec(String * path, String * name, List * args)
         perror("exec fork error");
     } else if (pid == 0) {
         String * full_path = append_string(path, name);
+        printf("executing %s\n", full_path -> content);
 
         // char ** arg_array = clone_char_array(cmd);
 
-        printf("executing %s\n", full_path -> content);
 
 
         // int result = execv("./ras/bin/ls", arg);

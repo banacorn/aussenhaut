@@ -36,8 +36,8 @@ Command * parse_command(String * str)
 
 char ** clone_char_array(Command * cmd, String * path)
 {
-    String * full_path = append_string(copy_string(cmd -> name), path);
-    // determine the "width" of matrix by measuring the longest string
+    String * full_path = append_string(path, copy_string(cmd -> name));
+    // determine the "width" of matrix by measuring the longest string + 1
     size_t longest = string_length(full_path);
     int number_of_args = arg_length(cmd);
     int i;
@@ -51,9 +51,13 @@ char ** clone_char_array(Command * cmd, String * path)
 
     // allocate memory, longest x length args + 2 (NULL terminating array)
     char ** space = malloc((number_of_args + 2) * sizeof(char *));
-    space[0] = malloc(longest);
-    strncpy(space[0], cmd -> name -> content, string_size(cmd -> name));
 
+    // copy command name
+    space[0] = malloc(longest);
+    strncpy(space[0], full_path -> content, string_size(full_path));
+    free_string(full_path);
+
+    // copy command args
     for (i = 0; i < number_of_args; i++) {
         space[i + 1] = malloc(longest);
 
@@ -61,14 +65,16 @@ char ** clone_char_array(Command * cmd, String * path)
         strncpy(space[i + 1], s -> content, string_size(s));
         free_string(s);
     }
+    // NULL terminating
     space[number_of_args + 1] = NULL;
+
     return space;
 }
 
 void free_command_char_array(Command * cmd, char ** space)
 {
     int i;
-    for (i = 0; i < arg_length(cmd); i++) {
+    for (i = 0; i < arg_length(cmd) + 1; i++) {
         free(space[i]);
     }
     free(space);
