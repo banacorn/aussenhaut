@@ -34,6 +34,47 @@ Command * parse_command(String * str)
     }
 }
 
+char ** clone_char_array(Command * cmd, String * path)
+{
+    String * full_path = append_string(copy_string(cmd -> name), path);
+    // determine the "width" of matrix by measuring the longest string
+    size_t longest = string_length(full_path);
+    int number_of_args = arg_length(cmd);
+    int i;
+    for (i = 0; i < number_of_args; i++) {
+        String * s = elemAt(cmd -> args, i);
+        size_t len = string_size(s);
+        free_string(s);
+        if (longest < len)
+            longest = len;
+    }
+
+    // allocate memory, longest x length args + 2 (NULL terminating array)
+    char ** space = malloc((number_of_args + 2) * sizeof(char *));
+    space[0] = malloc(longest);
+    strncpy(space[0], cmd -> name -> content, string_size(cmd -> name));
+
+    for (i = 0; i < number_of_args; i++) {
+        space[i + 1] = malloc(longest);
+
+        String * s = elemAt(cmd -> args, i);
+        strncpy(space[i + 1], s -> content, string_size(s));
+        free_string(s);
+    }
+    space[number_of_args + 1] = NULL;
+    return space;
+}
+
+void free_command_char_array(Command * cmd, char ** space)
+{
+    int i;
+    for (i = 0; i < arg_length(cmd); i++) {
+        free(space[i]);
+    }
+    free(space);
+}
+
+
 int arg_length(Command * node)
 {
     return length(node -> args);

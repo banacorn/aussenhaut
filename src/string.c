@@ -197,6 +197,18 @@ List * compact(List * xs)
     return filter(non_null_string_boxed, xs);
 }
 
+List * map_string(String *(*f)(String *), List * xs)
+{
+    if (xs -> Nil) {
+        return xs;
+    } else {
+        List * result = map_string(f, xs -> Cons);
+        String * val = f(unbox(xs -> data));
+        free(xs);
+        return cons(box_str(val), result);
+    }
+}
+
 String * append_string(String * xs, String * ys)
 {
     // allocate space

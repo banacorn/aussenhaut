@@ -250,6 +250,23 @@ List * copy_list(List * xs)
     }
 }
 
+void * elemAt(List * xs, int n)
+{
+    if (xs -> Nil) {
+        perror("indexing empty list");
+        return NULL;
+    } else {
+        if (n == 0) {
+            return head(xs);
+        } else if (n > 0) {
+            return elemAt(xs -> Cons, n - 1);
+        } else {
+            perror("invalid index number");
+            return NULL;
+        }
+    }
+}
+
 void * head(List * xs)
 {
     if (xs -> Nil) {

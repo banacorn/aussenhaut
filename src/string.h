@@ -25,6 +25,7 @@ Pair * split(String *, String *);
 Pair * rsplit(String *, String *);  // from the back
 List * tokenize(String *, String *);
 List * compact(List *);
+List * map_string(String *(*)(String *), List *);
 String * append_string(String *, String *);
 String * concat_string(List *);
 String * intercalate_string(List *, String *);

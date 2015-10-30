@@ -97,6 +97,8 @@ List * cons(Box *, List *);
 List * snoc(List *, Box *);
 List * copy_list(List *);
 
+void * elemAt(List *, int);
+
 void * head(List *);
 List * tail(List *);
 List * init(List *);

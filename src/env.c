@@ -81,11 +81,36 @@ String * show_all_env(Env * xs)
     }
 }
 
+// List * append_to_all(List * xs, String * ys)
+// {
+//     if (xs -> Nil) {
+//         free_string(ys);
+//         return xs;
+//     } else {
+//         xs -> data = box_str(append_string(unbox(xs -> data), copy_string(ys)));
+//         xs -> Cons = append_to_all(xs -> Cons, ys);
+//         return xs;
+//     }
+// }
+
+String * augment_path(String * path)
+{
+    String * here = string(".");
+    if (compare_string(path, here)) {
+        free_string(path);
+        free_string(here);
+        return string("ras/");
+    } else {
+        free_string(here);
+        return append_string(string("ras/"), append_string(path, string("/")));
+    }
+}
+
 List * get_path(Env * xs)
 {
     String * path_str = search(xs, string("PATH"));
     if (path_str) {
-        return tokenize(path_str, string(":"));
+        return map_string(augment_path, tokenize(path_str, string(":")));
     } else {
         return nil();
     }

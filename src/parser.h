@@ -17,6 +17,8 @@ Command * command(String * name, List * args);
 Command * parse_command(String * str);
 Command * copy_command(Command *);
 int arg_length(Command *);
+char ** clone_char_array(Command *, String *);
+void free_command_char_array(Command *, char **);
 void free_command(Command * node);
 void print_command(Command * node);
 
