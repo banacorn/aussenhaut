@@ -79,7 +79,6 @@ int exec_command(Env * env, Command * cmd, Socket sckt)
             perror("exec fork error");
             return -1;
         } else if (pid == 0) {  // child process
-
             replace_socket(sckt);
 
             char ** arg_array = clone_char_array(cmd, copy_string(executable));
@@ -92,7 +91,6 @@ int exec_command(Env * env, Command * cmd, Socket sckt)
             // not reachable anyway
             free_command_char_array(cmd, arg_array);
             free_string(executable);
-            printf("done executing %s\n", executable -> content);
             return 0;
 
         } else {    // parent process
@@ -107,7 +105,116 @@ int exec_command(Env * env, Command * cmd, Socket sckt)
 
 void exec_line(Env * env, Line * line)
 {
+    if (line -> redirect == FALSE && line -> out == -1 && line -> err == -1) {
+        List * commands = line -> cmds;
 
+        int number_of_commands = length(commands);
+        if (number_of_commands == 1) {
+            Socket std = {0, 1};
+            Command * c0 = head(commands);
+            exec_command(env, c0, std);
+            free_command(c0);
+        } else if (number_of_commands == 2) {
+            Socket bridge = create_pipe();
+            Socket s0 = {0, bridge.out};
+            Socket s1 = {bridge.in, 1};
+            Command * c0 = head(commands);
+            Command * c1 = last(commands);
+            exec_command(env, c0, s0);
+            exec_command(env, c1, s1);
+            free_command(c0);
+            free_command(c1);
+        } else if (number_of_commands == 3) {
+            Socket bridge0 = create_pipe();
+            Socket bridge1 = create_pipe();
+            Socket s0 = {0, bridge0.out};
+            Socket s1 = {bridge0.in, bridge1.out};
+            Socket s2 = {bridge1.in, 1};
+            Command * c0 = head(commands);
+            Command * c1 = head(commands -> Cons);
+            Command * c2 = head(commands -> Cons -> Cons);
+            exec_command(env, c0, s0);
+            exec_command(env, c1, s1);
+            exec_command(env, c2, s2);
+            free_command(c0);
+            free_command(c1);
+            free_command(c2);
+        } else if (number_of_commands == 4) {
+
+            // #1
+            Socket bridge0 = create_pipe();
+            Socket s0 = {0, bridge0.out};       // !
+            Command * c0 = head(commands);
+            exec_command(env, c0, s0);
+            free_command(c0);
+
+            // #2
+            Socket bridge1 = create_pipe();
+            Socket s1 = {bridge0.in, bridge1.out};
+            Command * c1 = head(commands -> Cons);
+            exec_command(env, c1, s1);
+            free_command(c1);
+
+            // # 3
+            Socket bridge2 = create_pipe();
+            Socket s2 = {bridge1.in, bridge2.out};
+            Command * c2 = head(commands -> Cons -> Cons);
+            exec_command(env, c2, s2);
+            free_command(c2);
+
+            // # 4
+            // bridge !
+            Socket s3 = {bridge2.in, 1};    // !
+            Command * c3 = head(commands -> Cons -> Cons -> Cons);
+            exec_command(env, c3, s3);
+            free_command(c3);
+        } else if (number_of_commands == 5) {
+
+            // #1
+            Socket bridge0 = create_pipe();
+            Socket s0 = {0, bridge0.out};       // !
+            Command * c0 = head(commands);
+            exec_command(env, c0, s0);
+            free_command(c0);
+
+            // #2
+            Socket bridge1 = create_pipe();
+            Socket s1 = {bridge0.in, bridge1.out};
+            Command * c1 = head(commands -> Cons);
+            exec_command(env, c1, s1);
+            free_command(c1);
+
+            // # 3
+            Socket bridge2 = create_pipe();
+            Socket s2 = {bridge1.in, bridge2.out};
+            Command * c2 = head(commands -> Cons -> Cons);
+            exec_command(env, c2, s2);
+            free_command(c2);
+
+            // # 4
+            Socket bridge3 = create_pipe();
+            Socket s3 = {bridge2.in, bridge3.out};
+            Command * c3 = head(commands -> Cons -> Cons -> Cons);
+            exec_command(env, c3, s3);
+            free_command(c3);
+
+            // # 5
+            // bridge !
+            Socket s4 = {bridge3.in, 1};    // !
+            Command * c4 = head(commands -> Cons -> Cons -> Cons -> Cons);
+            exec_command(env, c4, s4);
+            free_command(c4);
+        } else {
+            // bridges: N - 1
+            // sockets: N
+
+            printf("length of commands [%d]\n", length(commands));
+        }
+
+
+    } else {
+        puts("not supported yet");
+    }
 }
 
 void child(int socket)
@@ -168,7 +275,17 @@ void child(int socket)
 
 int main(int argc, char *argv[])
 {
-    create_server(7000, child);
+    // create_server(7000, child);
+
+    Env * e = cons_env(string("PATH"), string("bin:."), nil_env());
+    String * commands = string("ls -a | cat | number | number | number");
+    // String * commands = string("ls -a | cat | cat | cat | cat");
+    Line * l = parse_line(commands);
+
+    exec_line(e, l);
+
+    free_line(l);
+    free_env(e);
 
 
     // Env
