@@ -67,15 +67,17 @@ void replace_socket(Socket sckt)
     }
 }
 
-void close_socket(Socket sckt)
+void close_socket(Socket sckt, Socket reserve)
 {
-    if (sckt.in != 0)
+    if (sckt.in != reserve.in && sckt.in != 0) {
         close(sckt.in);
-    if (sckt.out != 1)
+    }
+    if (sckt.out != reserve.out && sckt.in != 1) {
         close(sckt.out);
+    }
 }
 
-int exec_command(Env * env, Command * cmd, Socket sckt, Bool redirect, String * target)
+int exec_command(Env * env, Command * cmd, Socket sckt, Socket stream)
 {
     String * executable = search_exec(env, cmd);
     int status;
@@ -89,13 +91,13 @@ int exec_command(Env * env, Command * cmd, Socket sckt, Bool redirect, String * 
             replace_socket(sckt);
 
             // if redirected, replace stdout
-            int redirected_fd;
-            if (redirect) {
-                redirected_fd = open(target -> content, O_WRONLY | O_CREAT, 0777);
-                close(1);
-                dup(redirected_fd);
-                close(redirected_fd);
-            }
+            // int redirected_fd;
+            // if (redirect) {
+            //     redirected_fd = open(target -> content, O_WRONLY | O_CREAT, 0777);
+            //     close(1);
+            //     dup(redirected_fd);
+            //     close(redirected_fd);
+            // }
 
             char ** arg_array = clone_char_array(cmd, copy_string(executable));
             int result = execv(executable -> content, arg_array);
@@ -108,7 +110,7 @@ int exec_command(Env * env, Command * cmd, Socket sckt, Bool redirect, String * 
             //waiting for child to terminate
             int pid = wait(&status);
 
-            close_socket(sckt);
+            close_socket(sckt, stream);
             free_string(executable);
             return 0;
         }
@@ -118,81 +120,49 @@ int exec_command(Env * env, Command * cmd, Socket sckt, Bool redirect, String * 
 }
 
 // returns a String if there's an unknown command, else NULL
-String * exec_line(Env * env, Line * line)
+String * exec_line(Env * env, Line * line, Socket stream)
 {
+    fprintf(stderr, "streaming [%d, %d]\n", stream.in, stream.out);
+
     if (line -> redirect) {
-        List * cursor = line -> cmds;
-        Socket last_pipe = {0, 1};
-        Socket next_pipe = {0, 1};
-        Socket sckt;
-        int redirect;
-        while (cursor -> Nil == FALSE) {
-            Command * cmd = head(cursor);
-            if (length(cursor) == 1) {           // last
-                sckt.in = last_pipe.in;
-                sckt.out = 1;
-                redirect = TRUE;
-            } else {
-                next_pipe = create_pipe();
-                sckt.in = last_pipe.in;
-                sckt.out = next_pipe.out;
-                last_pipe = next_pipe;
-                redirect = FALSE;
-            }
+        stream.out = open(line -> target -> content, O_WRONLY | O_CREAT, 0777);
+    }
 
-            // returns -1 if cannot find command
-            int exec_result = exec_command(env, cmd, sckt, redirect, line -> target);
-            if (exec_result == -1) {
-                String * unknown = copy_string(cmd -> name);
-                free_command(cmd);
-                return unknown;
-            } else {
-                free_command(cmd);
-                cursor = cursor -> Cons;
-            }
-        }
-        return NULL;
-    } else {
-        if (line -> out == -1 && line -> err == -1) {
-            List * cursor = line -> cmds;
-            Socket last_pipe = {0, 1};
-            Socket next_pipe = {0, 1};
-            Socket sckt;
-            while (cursor -> Nil == FALSE) {
-                Command * cmd = head(cursor);
-                if (length(cursor) == 1) {           // last
-                    sckt.in = last_pipe.in;
-                    sckt.out = 1;
-                } else {
-                    next_pipe = create_pipe();
-                    sckt.in = last_pipe.in;
-                    sckt.out = next_pipe.out;
-                    last_pipe = next_pipe;
-                }
-
-                // returns -1 if cannot find command
-                int exec_result = exec_command(env, cmd, sckt, FALSE, NULL);
-                if (exec_result == -1) {
-                    String * unknown = copy_string(cmd -> name);
-                    free_command(cmd);
-                    return unknown;
-                } else {
-                    free_command(cmd);
-                    cursor = cursor -> Cons;
-                }
-            }
-            return NULL;
+    // start bridging pipes;
+    List * cursor = line -> cmds;
+    Socket last_pipe = {0, 1};
+    Socket next_pipe = {0, 1};
+    Socket sckt;
+    while (cursor -> Nil == FALSE) {
+        Command * cmd = head(cursor);
+        if (length(cursor) == 1) {           // last
+            sckt.in = last_pipe.in;
+            sckt.out = stream.out;          // out
         } else {
-            puts("not supported yet");
-            return NULL;
+            next_pipe = create_pipe();
+            sckt.in = last_pipe.in;
+            sckt.out = next_pipe.out;
+            last_pipe = next_pipe;
+        }
+
+        // returns -1 if cannot find command
+        int exec_result = exec_command(env, cmd, sckt, stream);
+        if (exec_result == -1) {
+            String * unknown = copy_string(cmd -> name);
+            free_command(cmd);
+            return unknown;
+        } else {
+            free_command(cmd);
+            cursor = cursor -> Cons;
         }
     }
+
+    return NULL;
 }
 
 void child(int socket)
 {
     Env * env = insert(nil_env(), string("PATH"), string("bin:."));
-
     send_message(socket, string((char *)welcome_msg));
 
     while (1) {
@@ -221,9 +191,8 @@ void child(int socket)
                     send_message(socket, string("ERROR: wrong number of arguments for \"setenv\"\n"));
                 }
             } else {
-                String * unknown = exec_line(env, line);
-                print_line(line);
-                puts("");
+                Socket stream = {socket, socket};
+                String * unknown = exec_line(env, line, stream);
                 if (unknown) {
                     String * message = append_string(
                             string("Unknown command: ["),
@@ -234,27 +203,10 @@ void child(int socket)
                         );
                     send_message(socket, message);
                 } else {
-                    replace_socket(std);
-                    fprintf(stderr, "幹幹幹\n");
-                    send_message(socket, string("幹\n"));
+                    // replace_socket(std);
+                    // send_message(socket, string("幹\n"));
                 }
 
-                // send_message(socket, append_string(copy_string(command_name), string("\n")));
-
-                // Socket std = {0, 1};
-                // int exec_result = exec_command(env, first_command, std);
-                // if (exec_result == -1) {
-                //     String * message = append_string(
-                //         string("Unknown command: ["),
-                //         append_string(
-                //             copy_string(command_name),
-                //             string("]\n")
-                //         )
-                //     );
-                //     send_message(socket, message);
-                // } else {
-                //     send_message(socket, append_string(copy_string(command_name), string("\n")));
-                // }
             }
             free_command(first_command);
             free_line(line);
@@ -266,22 +218,22 @@ void child(int socket)
 
 int main(int argc, char *argv[])
 {
-    // create_server(7000, child);
-
-    Env * e = cons_env(string("PATH"), string("bin:."), nil_env());
-    String * commands = string("ls -a | number");
-    for (int i = 0; i < 10; i++) {
-        commands = append_string(commands, string(" | cat | cat"));
-    }
-    // commands = append_string(commands, string(" > test/temp"));
-    puts(commands -> content);
-    Line * l = parse_line(commands);
-    String * unkown = exec_line(e, l);
-    if (unkown) {
-        perror(unkown -> content);
-    }
-    free_line(l);
-    free_env(e);
+    create_server(7000, child);
+    //
+    // Env * e = cons_env(string("PATH"), string("bin:."), nil_env());
+    // String * commands = string("ls -a | number");
+    // // for (int i = 0; i < 1000; i++) {
+    // //     commands = append_string(commands, string(" | cat | cat"));
+    // // }
+    // // // commands = append_string(commands, string(" > test/temp"));
+    // puts(commands -> content);
+    // Line * l = parse_line(commands);
+    // String * unkown = exec_line(e, l, std);
+    // if (unkown) {
+    //     perror(unkown -> content);
+    // }
+    // free_line(l);
+    // free_env(e);
 
 
 
