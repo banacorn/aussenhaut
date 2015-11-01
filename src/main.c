@@ -118,7 +118,7 @@ int exec_command(Env * env, Command * cmd, Socket sckt, Bool redirect, String * 
 }
 
 // returns a String if there's an unknown command, else NULL
-String * exec_line(Env * env, Line * line, int socket)
+String * exec_line(Env * env, Line * line)
 {
     if (line -> redirect) {
         List * cursor = line -> cmds;
@@ -162,7 +162,7 @@ String * exec_line(Env * env, Line * line, int socket)
                 Command * cmd = head(cursor);
                 if (length(cursor) == 1) {           // last
                     sckt.in = last_pipe.in;
-                    sckt.out = socket;
+                    sckt.out = 1;
                 } else {
                     next_pipe = create_pipe();
                     sckt.in = last_pipe.in;
@@ -221,7 +221,7 @@ void child(int socket)
                     send_message(socket, string("ERROR: wrong number of arguments for \"setenv\"\n"));
                 }
             } else {
-                String * unknown = exec_line(env, line, socket);
+                String * unknown = exec_line(env, line);
                 print_line(line);
                 puts("");
                 if (unknown) {
@@ -266,22 +266,22 @@ void child(int socket)
 
 int main(int argc, char *argv[])
 {
-    create_server(7000, child);
+    // create_server(7000, child);
 
-    // Env * e = cons_env(string("PATH"), string("bin:."), nil_env());
-    // String * commands = string("ls -a | number");
-    // for (int i = 0; i < 10; i++) {
-    //     commands = append_string(commands, string(" | cat | cat"));
-    // }
-    // // commands = append_string(commands, string(" > test/temp"));
-    // puts(commands -> content);
-    // Line * l = parse_line(commands);
-    // String * unkown = exec_line(e, l);
-    // if (unkown) {
-    //     perror(unkown -> content);
-    // }
-    // free_line(l);
-    // free_env(e);
+    Env * e = cons_env(string("PATH"), string("bin:."), nil_env());
+    String * commands = string("ls -a | number");
+    for (int i = 0; i < 10; i++) {
+        commands = append_string(commands, string(" | cat | cat"));
+    }
+    // commands = append_string(commands, string(" > test/temp"));
+    puts(commands -> content);
+    Line * l = parse_line(commands);
+    String * unkown = exec_line(e, l);
+    if (unkown) {
+        perror(unkown -> content);
+    }
+    free_line(l);
+    free_env(e);
 
 
 
