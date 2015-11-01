@@ -36,9 +36,8 @@ Command * parse_command(String * str)
 
 char ** clone_char_array(Command * cmd, String * path)
 {
-    String * full_path = append_string(path, copy_string(cmd -> name));
     // determine the "width" of matrix by measuring the longest string + 1
-    size_t longest = string_size(full_path);
+    size_t longest = string_size(path);
     int number_of_args = arg_length(cmd);
     int i;
     for (i = 0; i < number_of_args; i++) {
@@ -54,8 +53,8 @@ char ** clone_char_array(Command * cmd, String * path)
 
     // copy command name
     space[0] = malloc(longest);
-    strncpy(space[0], full_path -> content, string_size(full_path));
-    free_string(full_path);
+    strncpy(space[0], path -> content, string_size(path));
+    free_string(path);
 
     // copy command args
     for (i = 0; i < number_of_args; i++) {

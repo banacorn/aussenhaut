@@ -2,6 +2,7 @@
 #include "type.h"
 #include "net.h"
 #include "env.h"
+#include <sys/wait.h>
 
 const char * welcome_msg =
     "****************************************\n"
@@ -44,6 +45,7 @@ Socket create_pipe()
         exit(EXIT_FAILURE);
     } else {
         Socket s = {fds[0], fds[1]};
+        // printf("new pipe [%d, %d]\n", s.in, s.out);
         return s;
     }
 }
@@ -51,11 +53,13 @@ Socket create_pipe()
 void replace_socket(Socket sckt)
 {
     if (sckt.in != 0) {
+        // printf("Child: [0] => [%d]\n", sckt.in);
         close(0);
         dup(sckt.in);
         close(sckt.in);
     }
     if (sckt.out != 1) {
+        // printf("Child: [1] => [%d]\n", sckt.out);
         close(1);
         dup(sckt.out);
         close(sckt.out);
@@ -64,14 +68,17 @@ void replace_socket(Socket sckt)
 
 void close_socket(Socket sckt)
 {
-    close(sckt.in);
-    close(sckt.out);
+    // printf("Parent: closing [%d, %d]\n", sckt.in, sckt.out);
+    // if (sckt.in == 0)
+        close(sckt.in);
+    // if (sckt.out == 1)
+        close(sckt.out);
 }
 
 int exec_command(Env * env, Command * cmd, Socket sckt)
 {
     String * executable = search_exec(env, cmd);
-
+    int status;
     // execute if found any
     if (executable) {
         pid_t pid = fork();
@@ -79,10 +86,10 @@ int exec_command(Env * env, Command * cmd, Socket sckt)
             perror("exec fork error");
             return -1;
         } else if (pid == 0) {  // child process
+            // printf("Child: [%d, %d]\n", sckt.in, sckt.out);
             replace_socket(sckt);
 
             char ** arg_array = clone_char_array(cmd, copy_string(executable));
-
             int result = execv(executable -> content, arg_array);
             if (result) {
                 free_command_char_array(cmd, arg_array);
@@ -92,9 +99,15 @@ int exec_command(Env * env, Command * cmd, Socket sckt)
             free_command_char_array(cmd, arg_array);
             free_string(executable);
             return 0;
-
         } else {    // parent process
+            //
+            //waiting for child to terminate
+            int pid = wait(&status);
+            //
             close_socket(sckt);
+            // if (WIFEXITED(status)) {
+            //   printf("Parent: Child exited with status: %d\n", WEXITSTATUS(status));
+            // }
             free_string(executable);
             return 0;
         }
@@ -106,112 +119,40 @@ int exec_command(Env * env, Command * cmd, Socket sckt)
 void exec_line(Env * env, Line * line)
 {
     if (line -> redirect == FALSE && line -> out == -1 && line -> err == -1) {
-        List * commands = line -> cmds;
+        List * cursor = line -> cmds;
+        Socket last_pipe = {0, 1};
+        Socket next_pipe = {0, 1};
+        Socket sckt;
 
-        int number_of_commands = length(commands);
-        if (number_of_commands == 1) {
-            Socket std = {0, 1};
-            Command * c0 = head(commands);
-            exec_command(env, c0, std);
-            free_command(c0);
-        } else if (number_of_commands == 2) {
-            Socket bridge = create_pipe();
-            Socket s0 = {0, bridge.out};
-            Socket s1 = {bridge.in, 1};
-            Command * c0 = head(commands);
-            Command * c1 = last(commands);
-            exec_command(env, c0, s0);
-            exec_command(env, c1, s1);
-            free_command(c0);
-            free_command(c1);
-        } else if (number_of_commands == 3) {
-            Socket bridge0 = create_pipe();
-            Socket bridge1 = create_pipe();
-            Socket s0 = {0, bridge0.out};
-            Socket s1 = {bridge0.in, bridge1.out};
-            Socket s2 = {bridge1.in, 1};
-            Command * c0 = head(commands);
-            Command * c1 = head(commands -> Cons);
-            Command * c2 = head(commands -> Cons -> Cons);
-            exec_command(env, c0, s0);
-            exec_command(env, c1, s1);
-            exec_command(env, c2, s2);
-            free_command(c0);
-            free_command(c1);
-            free_command(c2);
-        } else if (number_of_commands == 4) {
+        // create 3 pipes and share them all;
+        // Socket pipes[3];
+        // pipes[0] = create_pipe();
+        // pipes[1] = create_pipe();
+        // pipes[2] = create_pipe();
+        // int index = 0;
 
-            // #1
-            Socket bridge0 = create_pipe();
-            Socket s0 = {0, bridge0.out};       // !
-            Command * c0 = head(commands);
-            exec_command(env, c0, s0);
-            free_command(c0);
+        while (cursor -> Nil == FALSE) {
+            Command * cmd = head(cursor);
+            if (length(cursor) == 1) {           // last
+                sckt.in = last_pipe.in;
+                sckt.out = 1;
+            } else {
+                next_pipe = create_pipe();
+                // next_pipe = pipes[index];
+                // index = (index + 1) % 3;
 
-            // #2
-            Socket bridge1 = create_pipe();
-            Socket s1 = {bridge0.in, bridge1.out};
-            Command * c1 = head(commands -> Cons);
-            exec_command(env, c1, s1);
-            free_command(c1);
-
-            // # 3
-            Socket bridge2 = create_pipe();
-            Socket s2 = {bridge1.in, bridge2.out};
-            Command * c2 = head(commands -> Cons -> Cons);
-            exec_command(env, c2, s2);
-            free_command(c2);
-
-            // # 4
-            // bridge !
-            Socket s3 = {bridge2.in, 1};    // !
-            Command * c3 = head(commands -> Cons -> Cons -> Cons);
-            exec_command(env, c3, s3);
-            free_command(c3);
-        } else if (number_of_commands == 5) {
-
-            // #1
-            Socket bridge0 = create_pipe();
-            Socket s0 = {0, bridge0.out};       // !
-            Command * c0 = head(commands);
-            exec_command(env, c0, s0);
-            free_command(c0);
-
-            // #2
-            Socket bridge1 = create_pipe();
-            Socket s1 = {bridge0.in, bridge1.out};
-            Command * c1 = head(commands -> Cons);
-            exec_command(env, c1, s1);
-            free_command(c1);
-
-            // # 3
-            Socket bridge2 = create_pipe();
-            Socket s2 = {bridge1.in, bridge2.out};
-            Command * c2 = head(commands -> Cons -> Cons);
-            exec_command(env, c2, s2);
-            free_command(c2);
-
-            // # 4
-            Socket bridge3 = create_pipe();
-            Socket s3 = {bridge2.in, bridge3.out};
-            Command * c3 = head(commands -> Cons -> Cons -> Cons);
-            exec_command(env, c3, s3);
-            free_command(c3);
-
-            // # 5
-            // bridge !
-            Socket s4 = {bridge3.in, 1};    // !
-            Command * c4 = head(commands -> Cons -> Cons -> Cons -> Cons);
-            exec_command(env, c4, s4);
-            free_command(c4);
-        } else {
-            // bridges: N - 1
-            // sockets: N
-
-            printf("length of commands [%d]\n", length(commands));
+                sckt.in = last_pipe.in;
+                sckt.out = next_pipe.out;
+                last_pipe = next_pipe;
+            }
+            // printf("Parent: executing [%s] [ in %d , out %d ]\n"
+            //     , cmd -> name -> content
+            //     , sckt.in
+            //     , sckt.out);
+            exec_command(env, cmd, sckt);
+            free_command(cmd);
+            cursor = cursor -> Cons;
         }
-
-
     } else {
         puts("not supported yet");
     }
@@ -226,7 +167,6 @@ void child(int socket)
     while (1) {
         send_message(socket, string("% "));
         Line * line = parse_line(read_message(socket));
-        // print_line(line);
         if (null(line -> cmds)) {   // empty command
             free_line(line);
         } else {
@@ -278,16 +218,30 @@ int main(int argc, char *argv[])
     // create_server(7000, child);
 
     Env * e = cons_env(string("PATH"), string("bin:."), nil_env());
-    String * commands = string("ls -a | cat | number | number | number");
-    // String * commands = string("ls -a | cat | cat | cat | cat");
+    // String * commands = string("ls -a | number | cat");
+    String * commands = string("ls -a");
+    for (int i = 0; i < 2000; i++) {
+        commands = append_string(commands, string(" | cat | cat"));
+    }
+    // puts(commands -> content);
     Line * l = parse_line(commands);
-
     exec_line(e, l);
-
     free_line(l);
     free_env(e);
 
 
+
+
+    //
+    // Socket std = {0, 1};
+    // Command * cmd = parse_command(string("ls -a"));
+    // exec_command(e, cmd, std);
+    // Command * cmd1 = parse_command(string("ls"));
+    // exec_command(e, cmd1, std);
+
+
+
+    // exit(0);
     // Env
     // Env * e = cons_env(string("PATH"), string("bin:."), nil_env());
     //
@@ -338,42 +292,62 @@ int main(int argc, char *argv[])
     // printf("result: %d\n", exec_command(string("ras/bin/"), cmd));
     // free_command(cmd);
     //
+
+
+
+
+
+
     // int pipe_fds[2];
-    //
+    // int status;
     // int pipe_result = pipe(pipe_fds);
     // if (pipe_result == -1) {
     //     perror("creating pipe: failed");
     //     exit(EXIT_FAILURE);
     // }
     //
-    // char * const arg[] = {"ras/bin/ls", "-a", NULL};
+    // char * const arg[] = {"ras/bin/cat", NULL};
+    // // char * const arg[] = {"ras/bin/ls", "-a", NULL};
     // pid_t pid = fork();
     // if (pid == -1) {
     //     perror("fork error");
     // } else if (pid == 0) {      // child
     //     close(1);   // close stdout
     //     dup(pipe_fds[1]);
-    //     int result = execv("ras/bin/ls", arg);
+    //     int result = execv(arg[0], arg);
     //     if (result) {
     //         perror("Return not expected. Must be an execv error.n");
     //     }
     // } else {                    // parent
-    //
+    //     // if( (pid = wait(&status)) < 0){
+    //     //   perror("wait");
+    //     //   _exit(1);
+    //     // }
+    //     // if ( WIFEXITED(status) ){
+    //     //   printf("Parent: Child exited with status: %d\n", WEXITSTATUS(status));
+    //     // }
+    //     printf("Parent: finished\n");
     // }
+    // printf("Parent: start cat\n");
     //
-    // char * const arg2[] = {"ras/bin/cat", NULL};
+    // char * const arg2[] = {"ras/bin/ls", NULL};
     // pid_t pid2 = fork();
     // if (pid2 == -1) {
     //     perror("fork error");
     // } else if (pid2 == 0) {      // child
     //     close(0);   // close stdin
     //     dup(pipe_fds[0]);
-    //     int result = execv("ras/bin/cat", arg2);
+    //     int result = execv(arg2[0], arg2);
     //     if (result) {
     //         perror("Return not expected. Must be an execv error.n");
     //     }
     // } else {                    // parent
-    //
+    //     // if( (pid = wait(&status)) < 0){
+    //     //   perror("wait");
+    //     //   _exit(1);
+    //     // }
+    //     //
+    //     // printf("Parent: finished\n");
     // }
 
 
