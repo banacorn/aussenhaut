@@ -89,16 +89,6 @@ int exec_command(Env * env, Command * cmd, Socket sckt, Socket stream)
             return -1;
         } else if (pid == 0) {  // child process
             replace_socket(sckt);
-
-            // if redirected, replace stdout
-            // int redirected_fd;
-            // if (redirect) {
-            //     redirected_fd = open(target -> content, O_WRONLY | O_CREAT, 0777);
-            //     close(1);
-            //     dup(redirected_fd);
-            //     close(redirected_fd);
-            // }
-
             char ** arg_array = clone_char_array(cmd, copy_string(executable));
             int result = execv(executable -> content, arg_array);
             // not reachable anyway
@@ -120,7 +110,7 @@ int exec_command(Env * env, Command * cmd, Socket sckt, Socket stream)
 }
 
 // returns a String if there's an unknown command, else NULL
-String * exec_line(Env * env, Line * line, Socket stream)
+void exec_line(Env * env, Line * line, Socket stream)
 {
     fprintf(stderr, "streaming [%d, %d]\n", stream.in, stream.out);
 
@@ -130,7 +120,7 @@ String * exec_line(Env * env, Line * line, Socket stream)
 
     // start bridging pipes;
     List * cursor = line -> cmds;
-    Socket last_pipe = {0, 1};
+    Socket last_pipe = {stream.in, 1};
     Socket next_pipe = {0, 1};
     Socket sckt;
     while (cursor -> Nil == FALSE) {
@@ -150,15 +140,22 @@ String * exec_line(Env * env, Line * line, Socket stream)
         if (exec_result == -1) {
             String * unknown = copy_string(cmd -> name);
             free_command(cmd);
-            return unknown;
+            if (unknown) {
+                dprintf(stream.out, "Unknown command: [%s]\n", unknown -> content);
+                break;
+            }
         } else {
             free_command(cmd);
             cursor = cursor -> Cons;
         }
     }
-
-    return NULL;
 }
+
+// void exec_program(Env * env, Line * line, Socket stream)
+// {
+//
+// }
+
 
 void child(int socket)
 {
@@ -191,22 +188,8 @@ void child(int socket)
                     send_message(socket, string("ERROR: wrong number of arguments for \"setenv\"\n"));
                 }
             } else {
-                Socket stream = {socket, socket};
-                String * unknown = exec_line(env, line, stream);
-                if (unknown) {
-                    String * message = append_string(
-                            string("Unknown command: ["),
-                            append_string(
-                                unknown,
-                                string("]\n")
-                            )
-                        );
-                    send_message(socket, message);
-                } else {
-                    // replace_socket(std);
-                    // send_message(socket, string("幹\n"));
-                }
-
+                Socket stream = {0, socket};
+                exec_line(env, line, stream);
             }
             free_command(first_command);
             free_line(line);
@@ -219,22 +202,29 @@ void child(int socket)
 int main(int argc, char *argv[])
 {
     create_server(7000, child);
+
+    // Env * env = cons_env(string("PATH"), string("bin:."), nil_env());
+    // Line * command0 = parse_line(string("ls -a | number |1"));
+    // Line * command1 = parse_line(string("cat"));
+    // List * program = cons(box_line(command0), cons(box_line(command1), nil()));
     //
+    //
+    //
+    // free_list(program);
+    // free_env(env);
+
     // Env * e = cons_env(string("PATH"), string("bin:."), nil_env());
     // String * commands = string("ls -a | number");
     // // for (int i = 0; i < 1000; i++) {
     // //     commands = append_string(commands, string(" | cat | cat"));
     // // }
     // // // commands = append_string(commands, string(" > test/temp"));
-    // puts(commands -> content);
+    // fprintf(stderr, "%s\n", commands -> content);
     // Line * l = parse_line(commands);
-    // String * unkown = exec_line(e, l, std);
-    // if (unkown) {
-    //     perror(unkown -> content);
-    // }
+    // exec_line(e, l, std);
+    //
     // free_line(l);
     // free_env(e);
-
 
 
 

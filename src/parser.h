@@ -41,5 +41,6 @@ Line * parse_line(String *);
 Line * copy_line(Line *);
 void print_line(Line *);
 void free_line(Line *);
+Box * box_line(Line *);
 
 #endif // PARSER_H_

@@ -304,3 +304,8 @@ void free_line(Line * node)
         free_string(node -> target);
     free(node);
 }
+
+Box * box_line(Line * l)
+{
+    return box(l, (void (*)(void *))free_line, (void * (*)(void *))copy_line, (void (*)(void *))print_line);
+}
