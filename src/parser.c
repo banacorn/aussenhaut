@@ -38,7 +38,7 @@ char ** clone_char_array(Command * cmd, String * path)
 {
     String * full_path = append_string(path, copy_string(cmd -> name));
     // determine the "width" of matrix by measuring the longest string + 1
-    size_t longest = string_length(full_path);
+    size_t longest = string_size(full_path);
     int number_of_args = arg_length(cmd);
     int i;
     for (i = 0; i < number_of_args; i++) {

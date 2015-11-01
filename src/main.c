@@ -8,6 +8,108 @@ const char * welcome_msg =
     "** Welcome to the information server. **\n"
     "****************************************\n";
 
+// Env -> Cmd -> Nullable String
+String * search_exec(Env * env, Command * cmd)
+{
+    List * prefixes = get_path(env);
+
+    // scan through all of the paths, return the first one that is executable
+    List * cursor = prefixes;
+    String * executable = NULL;
+    while (cursor -> Nil == FALSE) {
+        String * prefix = append_string(head(cursor), copy_string(cmd -> name));
+        if (access( prefix -> content, X_OK ) != -1) {
+            executable = copy_string(prefix);
+            free_string(prefix);
+            break;
+        } else {
+            free_string(prefix);
+            cursor = cursor -> Cons;
+        }
+    }
+    free_list(prefixes);
+    return executable;
+}
+
+typedef struct Socket {
+    int in;
+    int out;
+} Socket;
+
+Socket create_pipe()
+{
+    int fds[2];
+    if (pipe(fds) == -1) {
+        perror("pipe");
+        exit(EXIT_FAILURE);
+    } else {
+        Socket s = {fds[0], fds[1]};
+        return s;
+    }
+}
+
+void replace_socket(Socket sckt)
+{
+    if (sckt.in != 0) {
+        close(0);
+        dup(sckt.in);
+        close(sckt.in);
+    }
+    if (sckt.out != 1) {
+        close(1);
+        dup(sckt.out);
+        close(sckt.out);
+    }
+}
+
+void close_socket(Socket sckt)
+{
+    close(sckt.in);
+    close(sckt.out);
+}
+
+int exec_command(Env * env, Command * cmd, Socket sckt)
+{
+    String * executable = search_exec(env, cmd);
+
+    // execute if found any
+    if (executable) {
+        pid_t pid = fork();
+        if (pid == -1) {
+            perror("exec fork error");
+            return -1;
+        } else if (pid == 0) {  // child process
+
+            replace_socket(sckt);
+
+            char ** arg_array = clone_char_array(cmd, copy_string(executable));
+
+            int result = execv(executable -> content, arg_array);
+            if (result) {
+                free_command_char_array(cmd, arg_array);
+                perror("execv error\n");
+            }
+            // not reachable anyway
+            free_command_char_array(cmd, arg_array);
+            free_string(executable);
+            printf("done executing %s\n", executable -> content);
+            return 0;
+
+        } else {    // parent process
+            close_socket(sckt);
+            free_string(executable);
+            return 0;
+        }
+    } else {
+        return -1;
+    }
+}
+
+void exec_line(Env * env, Line * line)
+{
+
+}
+
 void child(int socket)
 {
     Env * env = insert(nil_env(), string("PATH"), string("bin:."));
@@ -41,11 +143,20 @@ void child(int socket)
                     send_message(socket, string("ERROR: wrong number of arguments for \"setenv\"\n"));
                 }
             } else {
-                List * paths = get_path(env);
-                print_list(paths);
-                free_list(paths);
-                send_message(socket, append_string(copy_string(command_name), string("\n")));
-                // printf("PRINT !!\n");
+                Socket std = {0, 1};
+                int exec_result = exec_command(env, first_command, std);
+                if (exec_result == -1) {
+                    String * message = append_string(
+                        string("Unknown command: ["),
+                        append_string(
+                            copy_string(command_name),
+                            string("]\n")
+                        )
+                    );
+                    send_message(socket, message);
+                } else {
+                    send_message(socket, append_string(copy_string(command_name), string("\n")));
+                }
             }
             free_command(first_command);
             free_line(line);
@@ -55,58 +166,99 @@ void child(int socket)
 }
 
 
-
-void exec(String * path, String * name, List * args)
-{
-    pid_t pid = fork();
-    if (pid == -1) {
-        perror("exec fork error");
-    } else if (pid == 0) {
-        String * full_path = append_string(path, name);
-        printf("executing %s\n", full_path -> content);
-
-        // char ** arg_array = clone_char_array(cmd);
-
-
-
-        // int result = execv("./ras/bin/ls", arg);
-        // if (result) {
-        //     perror("Return not expected. Must be an execv error.n");
-        // }
-    }
-}
-//
-// int exec(Env * env, Command * cmd)
-// {
-//     pid_t pid = fork();
-//     if (pid == -1) {
-//         perror("exec fork error");
-//     } else if (pid == 0) {
-//         char ** arg_array = clone_char_array(cmd);
-//         // int result = execv("./ras/bin/ls", arg);
-//         // if (result) {
-//         //     perror("Return not expected. Must be an execv error.n");
-//         // }
-//     }
-// }
-
 int main(int argc, char *argv[])
 {
-    // exec(string("ras/bin/"), string("ls"), nil());
+    create_server(7000, child);
+
+
+    // Env
+    // Env * e = cons_env(string("PATH"), string("bin:."), nil_env());
+    //
+    // // Line
+    // String * str = string("ls -a | cat | cat | cat | cat");
+    // Line * l = parse_line(str);
+    // Command * ls = head(l -> cmds);
+    // Command * cat0 = head(l -> cmds -> Cons);
+    // Command * cat1 = head(l -> cmds -> Cons -> Cons);
+    // Command * cat2 = head(l -> cmds -> Cons -> Cons -> Cons);
+    // Command * cat3 = head(l -> cmds -> Cons -> Cons -> Cons -> Cons);
+    //
+    // Socket bet0 = create_pipe();
+    // Socket bet1 = create_pipe();
+    // Socket ls_socket = {0, bet0.out};
+    // Socket cat0_socket = {bet0.in, bet1.out};
+    // Socket cat1_socket = {bet1.in, 1};
+    // exec_command(e, ls, ls_socket);
+    // exec_command(e, cat0, cat0_socket);
+    // exec_command(e, cat1, cat1_socket);
+    //
+    // // Cleanup
+    // free_command(ls);
+    // free_command(cat0);
+    // free_command(cat1);
+    // free_command(cat2);
+    // free_command(cat3);
+    //
+    // free_line(l);
+    // free_env(e);
+
+
+
+
+    // Command * cmd0 = command(string("ls"), cons(box_chars("ls"), cons(box_chars("-a"), nil())));
+    // Command * cmd1 = command(string("cat"), cons(box_chars("cat") nil()));
+    // Command * cmd2 = command(string("cat"), cons(box_chars("cat") nil()));
+    //
+    // Line * l = line()
+
+
     // create_server(7000, child);
-    // char * const arg[] = {"ras/bin/lss", "-a", NULL};
+
+
+    // List * args = cons(box_chars("-a"), nil());
+    // Command * cmd = command(string("ls"), args);
+    // exec_command(string("ras/bin/"), cmd);
+    // printf("result: %d\n", exec_command(string("ras/bin/"), cmd));
+    // free_command(cmd);
+    //
+    // int pipe_fds[2];
+    //
+    // int pipe_result = pipe(pipe_fds);
+    // if (pipe_result == -1) {
+    //     perror("creating pipe: failed");
+    //     exit(EXIT_FAILURE);
+    // }
+    //
+    // char * const arg[] = {"ras/bin/ls", "-a", NULL};
     // pid_t pid = fork();
     // if (pid == -1) {
     //     perror("fork error");
-    // } else if (pid == 0) {
-    //     int result = execv("ras/bin/lss", arg);
+    // } else if (pid == 0) {      // child
+    //     close(1);   // close stdout
+    //     dup(pipe_fds[1]);
+    //     int result = execv("ras/bin/ls", arg);
     //     if (result) {
     //         perror("Return not expected. Must be an execv error.n");
     //     }
-    // } else {
-    //     // exit(1);
-    //     // create_server(7000, child);
+    // } else {                    // parent
+    //
     // }
+    //
+    // char * const arg2[] = {"ras/bin/cat", NULL};
+    // pid_t pid2 = fork();
+    // if (pid2 == -1) {
+    //     perror("fork error");
+    // } else if (pid2 == 0) {      // child
+    //     close(0);   // close stdin
+    //     dup(pipe_fds[0]);
+    //     int result = execv("ras/bin/cat", arg2);
+    //     if (result) {
+    //         perror("Return not expected. Must be an execv error.n");
+    //     }
+    // } else {                    // parent
+    //
+    // }
+
 
 
     // Env * d = nil_env();
