@@ -3,6 +3,8 @@
 #include "net.h"
 #include "env.h"
 #include <sys/wait.h>
+#include <fcntl.h>
+
 
 const char * welcome_msg =
     "****************************************\n"
@@ -37,6 +39,8 @@ typedef struct Socket {
     int out;
 } Socket;
 
+Socket std = {0, 1};
+
 Socket create_pipe()
 {
     int fds[2];
@@ -45,7 +49,6 @@ Socket create_pipe()
         exit(EXIT_FAILURE);
     } else {
         Socket s = {fds[0], fds[1]};
-        // printf("new pipe [%d, %d]\n", s.in, s.out);
         return s;
     }
 }
@@ -53,13 +56,11 @@ Socket create_pipe()
 void replace_socket(Socket sckt)
 {
     if (sckt.in != 0) {
-        // printf("Child: [0] => [%d]\n", sckt.in);
         close(0);
         dup(sckt.in);
         close(sckt.in);
     }
     if (sckt.out != 1) {
-        // printf("Child: [1] => [%d]\n", sckt.out);
         close(1);
         dup(sckt.out);
         close(sckt.out);
@@ -68,14 +69,13 @@ void replace_socket(Socket sckt)
 
 void close_socket(Socket sckt)
 {
-    // printf("Parent: closing [%d, %d]\n", sckt.in, sckt.out);
-    // if (sckt.in == 0)
+    if (sckt.in != 0)
         close(sckt.in);
-    // if (sckt.out == 1)
+    if (sckt.out != 1)
         close(sckt.out);
 }
 
-int exec_command(Env * env, Command * cmd, Socket sckt)
+int exec_command(Env * env, Command * cmd, Socket sckt, Bool redirect, String * target)
 {
     String * executable = search_exec(env, cmd);
     int status;
@@ -86,28 +86,29 @@ int exec_command(Env * env, Command * cmd, Socket sckt)
             perror("exec fork error");
             return -1;
         } else if (pid == 0) {  // child process
-            // printf("Child: [%d, %d]\n", sckt.in, sckt.out);
             replace_socket(sckt);
+
+            // if redirected, replace stdout
+            int redirected_fd;
+            if (redirect) {
+                redirected_fd = open(target -> content, O_WRONLY | O_CREAT, 0777);
+                close(1);
+                dup(redirected_fd);
+                close(redirected_fd);
+            }
 
             char ** arg_array = clone_char_array(cmd, copy_string(executable));
             int result = execv(executable -> content, arg_array);
-            if (result) {
-                free_command_char_array(cmd, arg_array);
-                perror("execv error\n");
-            }
             // not reachable anyway
+            perror("execv error\n");
             free_command_char_array(cmd, arg_array);
             free_string(executable);
             return 0;
         } else {    // parent process
-            //
             //waiting for child to terminate
             int pid = wait(&status);
-            //
+
             close_socket(sckt);
-            // if (WIFEXITED(status)) {
-            //   printf("Parent: Child exited with status: %d\n", WEXITSTATUS(status));
-            // }
             free_string(executable);
             return 0;
         }
@@ -116,45 +117,75 @@ int exec_command(Env * env, Command * cmd, Socket sckt)
     }
 }
 
-void exec_line(Env * env, Line * line)
+// returns a String if there's an unknown command, else NULL
+String * exec_line(Env * env, Line * line, int socket)
 {
-    if (line -> redirect == FALSE && line -> out == -1 && line -> err == -1) {
+    if (line -> redirect) {
         List * cursor = line -> cmds;
         Socket last_pipe = {0, 1};
         Socket next_pipe = {0, 1};
         Socket sckt;
-
-        // create 3 pipes and share them all;
-        // Socket pipes[3];
-        // pipes[0] = create_pipe();
-        // pipes[1] = create_pipe();
-        // pipes[2] = create_pipe();
-        // int index = 0;
-
+        int redirect;
         while (cursor -> Nil == FALSE) {
             Command * cmd = head(cursor);
             if (length(cursor) == 1) {           // last
                 sckt.in = last_pipe.in;
                 sckt.out = 1;
+                redirect = TRUE;
             } else {
                 next_pipe = create_pipe();
-                // next_pipe = pipes[index];
-                // index = (index + 1) % 3;
-
                 sckt.in = last_pipe.in;
                 sckt.out = next_pipe.out;
                 last_pipe = next_pipe;
+                redirect = FALSE;
             }
-            // printf("Parent: executing [%s] [ in %d , out %d ]\n"
-            //     , cmd -> name -> content
-            //     , sckt.in
-            //     , sckt.out);
-            exec_command(env, cmd, sckt);
-            free_command(cmd);
-            cursor = cursor -> Cons;
+
+            // returns -1 if cannot find command
+            int exec_result = exec_command(env, cmd, sckt, redirect, line -> target);
+            if (exec_result == -1) {
+                String * unknown = copy_string(cmd -> name);
+                free_command(cmd);
+                return unknown;
+            } else {
+                free_command(cmd);
+                cursor = cursor -> Cons;
+            }
         }
+        return NULL;
     } else {
-        puts("not supported yet");
+        if (line -> out == -1 && line -> err == -1) {
+            List * cursor = line -> cmds;
+            Socket last_pipe = {0, 1};
+            Socket next_pipe = {0, 1};
+            Socket sckt;
+            while (cursor -> Nil == FALSE) {
+                Command * cmd = head(cursor);
+                if (length(cursor) == 1) {           // last
+                    sckt.in = last_pipe.in;
+                    sckt.out = socket;
+                } else {
+                    next_pipe = create_pipe();
+                    sckt.in = last_pipe.in;
+                    sckt.out = next_pipe.out;
+                    last_pipe = next_pipe;
+                }
+
+                // returns -1 if cannot find command
+                int exec_result = exec_command(env, cmd, sckt, FALSE, NULL);
+                if (exec_result == -1) {
+                    String * unknown = copy_string(cmd -> name);
+                    free_command(cmd);
+                    return unknown;
+                } else {
+                    free_command(cmd);
+                    cursor = cursor -> Cons;
+                }
+            }
+            return NULL;
+        } else {
+            puts("not supported yet");
+            return NULL;
+        }
     }
 }
 
@@ -190,20 +221,40 @@ void child(int socket)
                     send_message(socket, string("ERROR: wrong number of arguments for \"setenv\"\n"));
                 }
             } else {
-                Socket std = {0, 1};
-                int exec_result = exec_command(env, first_command, std);
-                if (exec_result == -1) {
+                String * unknown = exec_line(env, line, socket);
+                print_line(line);
+                puts("");
+                if (unknown) {
                     String * message = append_string(
-                        string("Unknown command: ["),
-                        append_string(
-                            copy_string(command_name),
-                            string("]\n")
-                        )
-                    );
+                            string("Unknown command: ["),
+                            append_string(
+                                unknown,
+                                string("]\n")
+                            )
+                        );
                     send_message(socket, message);
                 } else {
-                    send_message(socket, append_string(copy_string(command_name), string("\n")));
+                    replace_socket(std);
+                    fprintf(stderr, "幹幹幹\n");
+                    send_message(socket, string("幹\n"));
                 }
+
+                // send_message(socket, append_string(copy_string(command_name), string("\n")));
+
+                // Socket std = {0, 1};
+                // int exec_result = exec_command(env, first_command, std);
+                // if (exec_result == -1) {
+                //     String * message = append_string(
+                //         string("Unknown command: ["),
+                //         append_string(
+                //             copy_string(command_name),
+                //             string("]\n")
+                //         )
+                //     );
+                //     send_message(socket, message);
+                // } else {
+                //     send_message(socket, append_string(copy_string(command_name), string("\n")));
+                // }
             }
             free_command(first_command);
             free_line(line);
@@ -215,19 +266,22 @@ void child(int socket)
 
 int main(int argc, char *argv[])
 {
-    // create_server(7000, child);
+    create_server(7000, child);
 
-    Env * e = cons_env(string("PATH"), string("bin:."), nil_env());
-    // String * commands = string("ls -a | number | cat");
-    String * commands = string("ls -a");
-    for (int i = 0; i < 2000; i++) {
-        commands = append_string(commands, string(" | cat | cat"));
-    }
+    // Env * e = cons_env(string("PATH"), string("bin:."), nil_env());
+    // String * commands = string("ls -a | number");
+    // for (int i = 0; i < 10; i++) {
+    //     commands = append_string(commands, string(" | cat | cat"));
+    // }
+    // // commands = append_string(commands, string(" > test/temp"));
     // puts(commands -> content);
-    Line * l = parse_line(commands);
-    exec_line(e, l);
-    free_line(l);
-    free_env(e);
+    // Line * l = parse_line(commands);
+    // String * unkown = exec_line(e, l);
+    // if (unkown) {
+    //     perror(unkown -> content);
+    // }
+    // free_line(l);
+    // free_env(e);
 
 
 
