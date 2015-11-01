@@ -201,7 +201,7 @@ void child(int socket)
 
 int main(int argc, char *argv[])
 {
-    create_server(7000, child);
+    create_server(4444, child);
 
     // Env * env = cons_env(string("PATH"), string("bin:."), nil_env());
     // Line * command0 = parse_line(string("ls -a | number |1"));
