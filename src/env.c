@@ -95,15 +95,17 @@ String * show_all_env(Env * xs)
 
 String * augment_path(String * path)
 {
-    String * here = string(".");
-    if (compare_string(path, here)) {
-        free_string(path);
-        free_string(here);
-        return string("ras/");
-    } else {
-        free_string(here);
-        return append_string(string("ras/"), append_string(path, string("/")));
-    }
+    return append_string(path, string("/"));
+    // String * here = string(".");
+    // if (compare_string(path, here)) {
+    //     free_string(path);
+    //     free_string(here);
+    //     return string("./");
+    //     // return string("ras/");
+    // } else {
+    //     free_string(here);
+    //     return append_string(path, string("/"));
+    // }
 }
 
 List * get_path(Env * xs)
