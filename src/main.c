@@ -172,8 +172,29 @@ void child(int socket)
 
                 break;
             } else if (compare_string(string("printenv"), command_name)) {
-                String * message = show_all_env(env);
-                send_message(socket, message);
+                if (arg_length(first_command) == 0) {
+                    String * message = show_all_env(env);
+                    send_message(socket, message);
+                } else {
+                    String * key = head(first_command -> args);
+                    String * val = search(env, copy_string(key));
+                    if (val) {
+                        String * message = append_string(val, string("\n"));
+                        free_string(key);
+                        send_message(socket, message);
+                    } else {
+                        String * message = append_string(key, string("=\n"));
+                        send_message(socket, message);
+                    }
+                }
+            } else if (compare_string(string("remove"), command_name)) {
+                if (arg_length(first_command) == 1) {
+                    String * key = head(first_command -> args);
+                    env = remove_env(env, key);
+                } else {
+                    String * message = string("wrong number of arguments for remove\n");
+                    send_message(socket, message);
+                }
             } else if (compare_string(string("setenv"), command_name)) {
                 if (arg_length(first_command) == 2) {
                     String * key = trim(head(first_command -> args));
@@ -220,6 +241,13 @@ int main(int argc, char *argv[])
     //
     // free_line(l);
     // free_env(e);
+
+    // Env * env = cons_env(string("HA"), string("bin:."), cons_env(string("PATH"), string("bin:."), nil_env()));
+    // print_env(env);
+    // env = remove_env(env, string("PATH"));
+    // print_env(env);
+    // free_env(env);
+
 
     return 0;
 }

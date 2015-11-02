@@ -22,6 +22,7 @@ Env * copy_env(Env *);
 
 // operation
 Env * insert(Env *, String *, String *);
+Env * remove_env(Env *, String *);
 String * search(Env *, String *);
 String * show_all_env(Env *);
 List * get_path(Env *);

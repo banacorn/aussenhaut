@@ -50,6 +50,26 @@ Env * insert(Env * xs, String * k, String * v)
         }
     }
 }
+Env * remove_env(Env * xs, String * s)
+{
+    if (xs -> Nil) {
+        free_string(s);
+        return xs;
+    } else {
+        if (compare_string(xs -> key, s)) {        // found
+            Env * rest = xs -> Cons;
+            free_string(xs -> key);
+            free_string(xs -> val);
+            free(xs);
+            free_string(s);
+            return rest;
+        } else {
+            xs -> Cons = remove_env(xs -> Cons, s);
+            return xs;
+        }
+    }
+
+}
 
 // returns NULL
 String * search(Env * xs, String * s)
