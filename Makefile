@@ -2,16 +2,16 @@ CFLAGS=-Wall -g
 
 go:
 	@ make clean
-	@ mkdir -p build
-	@ cc -o build/main src/main.c src/type.c src/string.c src/parser.c src/net.c src/env.c
-	@ ./build/main
+	@ mkdir -p bin
+	@ cc src/main.c src/type.c src/string.c src/parser.c src/net.c src/env.c -Lbuild -lCello -o bin/main 
+	@ ./bin/main
 
 check:
 	@ make go
-	@ valgrind --leak-check=full --track-origins=yes ./build/main
+	@ valgrind --leak-check=full --track-origins=yes ./bin/main
 
 clean:
-	@ rm -f ./build/main
+	@ rm -f ./bin/main
 
 setup-bin:
 	@ make clean-bin
