@@ -5,7 +5,7 @@
 #define LINEBUFSIZE 16384
 #define CMDBUFSIZE 512
 
-String * read_message(int socket)
+String_ * read_message(int socket)
 {
     char buffer[LINEBUFSIZE];
     ssize_t recv_result = recv(socket, buffer, LINEBUFSIZE, 0);
@@ -18,7 +18,7 @@ String * read_message(int socket)
     }
 }
 
-void send_message(int socket, String * message)
+void send_message(int socket, String_ * message)
 {
     int send_result = send(socket, message -> content, string_length(message), 0);
     free_string(message);

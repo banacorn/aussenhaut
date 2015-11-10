@@ -15,7 +15,7 @@ Env * nil_env()
     return node;
 }
 
-Env * cons_env(String * k , String * v, Env * xs)
+Env * cons_env(String_ * k , String_ * v, Env * xs)
 {
     Env * node = malloc(sizeof(Env));
     node -> Nil = FALSE;
@@ -34,7 +34,7 @@ Env * copy_env(Env * xs)
     }
 }
 
-Env * insert(Env * xs, String * k, String * v)
+Env * insert(Env * xs, String_ * k, String_ * v)
 {
     if (xs -> Nil) {                                // not found, insert
         return cons_env(k, v, xs);
@@ -50,7 +50,7 @@ Env * insert(Env * xs, String * k, String * v)
         }
     }
 }
-Env * remove_env(Env * xs, String * s)
+Env * remove_env(Env * xs, String_ * s)
 {
     if (xs -> Nil) {
         free_string(s);
@@ -72,7 +72,7 @@ Env * remove_env(Env * xs, String * s)
 }
 
 // returns NULL
-String * search(Env * xs, String * s)
+String_ * search(Env * xs, String_ * s)
 {
     if (xs -> Nil) {
         free_string(s);
@@ -87,13 +87,13 @@ String * search(Env * xs, String * s)
     }
 }
 
-String * show_all_env(Env * xs)
+String_ * show_all_env(Env * xs)
 {
     if (xs -> Nil) {
         return string("");
     } else {
-        String * result = show_all_env(xs -> Cons);
-        String * new_str = append_string(copy_string(xs -> key), string("="));
+        String_ * result = show_all_env(xs -> Cons);
+        String_ * new_str = append_string(copy_string(xs -> key), string("="));
         new_str = append_string(new_str, copy_string(xs -> val));
         new_str = append_string(new_str, string("\n"));
         new_str = append_string(new_str, result);
@@ -101,7 +101,7 @@ String * show_all_env(Env * xs)
     }
 }
 
-// List * append_to_all(List * xs, String * ys)
+// List_ * append_to_all(List_ * xs, String_ * ys)
 // {
 //     if (xs -> Nil) {
 //         free_string(ys);
@@ -113,10 +113,10 @@ String * show_all_env(Env * xs)
 //     }
 // }
 
-String * augment_path(String * path)
+String_ * augment_path(String_ * path)
 {
     return append_string(path, string("/"));
-    // String * here = string(".");
+    // String_ * here = string(".");
     // if (compare_string(path, here)) {
     //     free_string(path);
     //     free_string(here);
@@ -128,9 +128,9 @@ String * augment_path(String * path)
     // }
 }
 
-List * get_path(Env * xs)
+List_ * get_path(Env * xs)
 {
-    String * path_str = search(xs, string("PATH"));
+    String_ * path_str = search(xs, string("PATH"));
     if (path_str) {
         return map_string(augment_path, tokenize(path_str, string(":")));
     } else {

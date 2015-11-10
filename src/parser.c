@@ -6,7 +6,7 @@
 //  Command
 ////////////////////////////////////////////////////////////////////////////////
 
-Command * command(String * name, List * args)
+Command * command(String_ * name, List_ * args)
 {
     Command * node = malloc(sizeof(Command));
     node -> name = name;
@@ -16,32 +16,32 @@ Command * command(String * name, List * args)
 
 Command * copy_command(Command * node)
 {
-    return command(copy_string(node -> name), copy_list(node -> args));
+    return command(copy_string(node -> name), copy__list(node -> args));
 }
 
-Command * parse_command(String * str)
+Command * parse_command(String_ * str)
 {
     str = trim(str);
     if (null_string(str)) {
         free_string(str);
         return command(string(""), nil());
     } else {
-        List * tokens = compact(tokenize(str , string(" ")));
-        String * name = head(tokens);
-        List * args = tail(tokens);
+        List_ * tokens = compact(tokenize(str , string(" ")));
+        String_ * name = head(tokens);
+        List_ * args = tail(tokens);
         free_list(tokens);
         return command(name, args);
     }
 }
 
-char ** clone_char_array(Command * cmd, String * path)
+char ** clone_char_array(Command * cmd, String_ * path)
 {
     // determine the "width" of matrix by measuring the longest string + 1
     size_t longest = string_size(path);
     int number_of_args = arg_length(cmd);
     int i;
     for (i = 0; i < number_of_args; i++) {
-        String * s = elemAt(cmd -> args, i);
+        String_ * s = elemAt(cmd -> args, i);
         size_t len = string_size(s);
         free_string(s);
         if (longest < len)
@@ -60,7 +60,7 @@ char ** clone_char_array(Command * cmd, String * path)
     for (i = 0; i < number_of_args; i++) {
         space[i + 1] = malloc(longest);
 
-        String * s = elemAt(cmd -> args, i);
+        String_ * s = elemAt(cmd -> args, i);
         strncpy(space[i + 1], s -> content, string_size(s));
         free_string(s);
     }
@@ -99,11 +99,11 @@ void print_command(Command * node)
         printf("%s", node -> name -> content);
     } else {
         printf("%s ", node -> name -> content);
-        print_list(node -> args);
+        print__list(node -> args);
     }
 }
 
-Box * box_cmd(Command * cmd)
+Box_ * box_cmd(Command * cmd)
 {
     return box(cmd, (void (*)(void *))free_command, (void * (*)(void *))copy_command, (void (*)(void *))print_command);
 }
@@ -113,7 +113,7 @@ Box * box_cmd(Command * cmd)
 //  Line
 ////////////////////////////////////////////////////////////////////////////////
 
-Line * line(List * cmds, Bool redirect, String * target, int out, int err)
+Line * line(List_ * cmds, Bool redirect, String_ * target, int out, int err)
 {
     Line * node = malloc(sizeof(Line));
     node -> cmds = cmds;
@@ -124,18 +124,18 @@ Line * line(List * cmds, Bool redirect, String * target, int out, int err)
     return node;
 }
 
-Box * parse_command_boxed(Box * data)
+Box_ * parse_command_boxed(Box_ * data)
 {
     return box_cmd(parse_command(unbox(data)));
 }
 
-// String -> Maybe (List Command, String)
-Maybe * parse_redirection(String * str)
+// String_ -> Maybe (List_ Command, String_)
+Maybe * parse_redirection(String_ * str)
 {
     str = trim(str);
     Pair * splitted = rsplit(str, string(" > "));
-    String * first_part = fst(splitted);
-    String * second_part = snd(splitted);
+    String_ * first_part = fst(splitted);
+    String_ * second_part = snd(splitted);
 
     if (null_string(first_part)) {  // no " > "
         free_string(first_part);
@@ -143,10 +143,10 @@ Maybe * parse_redirection(String * str)
         free_pair(splitted);
         return nothing();
     } else {                        // has " > "
-        List * snd_part_cmds = compact(tokenize(second_part, string(" ")));
+        List_ * snd_part_cmds = compact(tokenize(second_part, string(" ")));
         if (length(snd_part_cmds) == 1) {   // OK
-            String * last_str = head(snd_part_cmds);
-            List * commands = map(parse_command_boxed, tokenize(first_part, string(" | ")));
+            String_ * last_str = head(snd_part_cmds);
+            List_ * commands = map_(parse_command_boxed, tokenize(first_part, string(" | ")));
             free_list(snd_part_cmds);
             free_pair(splitted);
             return just(box_pair(pair(box_list(commands), box_str(last_str))));
@@ -159,13 +159,13 @@ Maybe * parse_redirection(String * str)
     }
 }
 
-// String -> Int
-int parse_numbered_pipe(String * str)
+// String_ -> Int
+int parse_numbered_pipe(String_ * str)
 {
     int result = -1;
-    String * head = take_string(str, 1);
-    String * tail = drop_string(str, 1);
-    String * pipe = string("|");
+    String_ * head = take_string(str, 1);
+    String_ * tail = drop_string(str, 1);
+    String_ * pipe = string("|");
 
     if (compare_string(head, pipe) && numeral(tail)) {
         result = to_int(tail);
@@ -178,13 +178,13 @@ int parse_numbered_pipe(String * str)
     return result;
 }
 
-// String -> Int
-int parse_numbered_bang(String * str)
+// String_ -> Int
+int parse_numbered_bang(String_ * str)
 {
     int result = -1;
-    String * head = take_string(str, 1);
-    String * tail = drop_string(str, 1);
-    String * bang = string("!");
+    String_ * head = take_string(str, 1);
+    String_ * tail = drop_string(str, 1);
+    String_ * bang = string("!");
 
     if (compare_string(head, bang) && numeral(tail)) {
         result = to_int(tail);
@@ -197,16 +197,16 @@ int parse_numbered_bang(String * str)
     return result;
 }
 
-// String -> Line
-Line * parse_piping(String * str)
+// String_ -> Line
+Line * parse_piping(String_ * str)
 {
     // preprocess
     str = trim(str);
-    List * tokens = compact(tokenize(str, string(" ")));
+    List_ * tokens = compact(tokenize(str, string(" ")));
     if (length(tokens) > 1) {
-        String * last_str = last(tokens);
-        List * temp_init = init(tokens);
-        String * snd_last_str = last(temp_init);
+        String_ * last_str = last(tokens);
+        List_ * temp_init = init(tokens);
+        String_ * snd_last_str = last(temp_init);
         free_list(temp_init);
         int last_is_pipe = parse_numbered_pipe(copy_string(last_str));
         int last_is_bang = parse_numbered_bang(last_str);
@@ -215,37 +215,37 @@ Line * parse_piping(String * str)
         int snd_last_is_bang = parse_numbered_bang(snd_last_str);
 
         if (snd_last_is_bang > -1 && last_is_pipe > -1) { // !N |N
-            List * temp_init = init(tokens);
-            String * cmds_str = intercalate_string(init(temp_init), string(" "));
-            List * cmds = map(parse_command_boxed, tokenize(cmds_str, string(" | ")));
+            List_ * temp_init = init(tokens);
+            String_ * cmds_str = intercalate_string(init(temp_init), string(" "));
+            List_ * cmds = map_(parse_command_boxed, tokenize(cmds_str, string(" | ")));
             free_list(temp_init);
             free_list(tokens);
             return line(cmds, FALSE, string(""), last_is_pipe, snd_last_is_bang);
         } else if (snd_last_is_pipe > -1 && last_is_bang > -1) { // |N !N
-            List * temp_init = init(tokens);
-            String * cmds_str = intercalate_string(init(temp_init), string(" "));
-            List * cmds = map(parse_command_boxed, tokenize(cmds_str, string(" | ")));
+            List_ * temp_init = init(tokens);
+            String_ * cmds_str = intercalate_string(init(temp_init), string(" "));
+            List_ * cmds = map_(parse_command_boxed, tokenize(cmds_str, string(" | ")));
             free_list(temp_init);
             free_list(tokens);
             return line(cmds, FALSE, string(""), snd_last_is_pipe, last_is_bang);
         } else if (last_is_bang > -1) { // !N
-            String * cmds_str = intercalate_string(init(tokens), string(" "));
-            List * cmds = map(parse_command_boxed, tokenize(cmds_str, string(" | ")));
+            String_ * cmds_str = intercalate_string(init(tokens), string(" "));
+            List_ * cmds = map_(parse_command_boxed, tokenize(cmds_str, string(" | ")));
             free_list(tokens);
             return line(cmds, FALSE, string(""), -1, last_is_bang);
         } else if (last_is_pipe > -1) { // |N
-            String * cmds_str = intercalate_string(init(tokens), string(" "));
-            List * cmds = map(parse_command_boxed, tokenize(cmds_str, string(" | ")));
+            String_ * cmds_str = intercalate_string(init(tokens), string(" "));
+            List_ * cmds = map_(parse_command_boxed, tokenize(cmds_str, string(" | ")));
             free_list(tokens);
             return line(cmds, FALSE, string(""), last_is_pipe, -1);
         } else  { // nothing
 
-            String * cmds_str = intercalate_string(tokens, string(" "));
-            List * cmds = map(parse_command_boxed, tokenize(cmds_str, string(" | ")));
+            String_ * cmds_str = intercalate_string(tokens, string(" "));
+            List_ * cmds = map_(parse_command_boxed, tokenize(cmds_str, string(" | ")));
             return line(cmds, FALSE, string(""), -1, -1);
         }
     } else if (length(tokens) == 1) {
-        List * cmds = map(parse_command_boxed, tokenize(head(tokens), string(" | ")));
+        List_ * cmds = map_(parse_command_boxed, tokenize(head(tokens), string(" | ")));
         free_list(tokens);
         return line(cmds, FALSE, string(""), -1, -1);
     } else {
@@ -255,7 +255,7 @@ Line * parse_piping(String * str)
 }
 
 
-Line * parse_line(String * str)
+Line * parse_line(String_ * str)
 {
     str = trim(str);
     Maybe * result_redirection = parse_redirection(copy_string(str));
@@ -276,17 +276,17 @@ Line * parse_line(String * str)
 
 Line * copy_line(Line * node)
 {
-    return line(copy_list(node -> cmds), node -> redirect, node -> target, node -> out, node -> err);
+    return line(copy__list(node -> cmds), node -> redirect, node -> target, node -> out, node -> err);
 }
 
 void print_line(Line * node)
 {
     if (node -> redirect) {         // has ">"
-        print_list(node -> cmds);
+        print__list(node -> cmds);
         printf(" > ");
         print_string(node -> target);
     } else {
-        print_list(node -> cmds);
+        print__list(node -> cmds);
         if (!null(node -> cmds)) {
             if (node -> out != -1)
                 printf(" |%d", node -> out);
@@ -305,7 +305,7 @@ void free_line(Line * node)
     free(node);
 }
 
-Box * box_line(Line * l)
+Box_ * box_line(Line * l)
 {
     return box(l, (void (*)(void *))free_line, (void * (*)(void *))copy_line, (void (*)(void *))print_line);
 }

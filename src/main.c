@@ -1,3 +1,4 @@
+#include "Cello.h"
 #include "parser.h"
 #include "type.h"
 #include "net.h"
@@ -11,16 +12,16 @@ const char * welcome_msg =
     "** Welcome to the information server. **\n"
     "****************************************\n";
 
-// Env -> Cmd -> Nullable String
-String * search_exec(Env * env, Command * cmd)
+// Env -> Cmd -> Nullable String_
+String_ * search_exec(Env * env, Command * cmd)
 {
-    List * prefixes = get_path(env);
+    List_ * prefixes = get_path(env);
 
     // scan through all of the paths, return the first one that is executable
-    List * cursor = prefixes;
-    String * executable = NULL;
+    List_ * cursor = prefixes;
+    String_ * executable = NULL;
     while (cursor -> Nil == FALSE) {
-        String * prefix = append_string(head(cursor), copy_string(cmd -> name));
+        String_ * prefix = append_string(head(cursor), copy_string(cmd -> name));
         if (access( prefix -> content, X_OK ) != -1) {
             executable = copy_string(prefix);
             free_string(prefix);
@@ -35,8 +36,8 @@ String * search_exec(Env * env, Command * cmd)
 }
 
 typedef struct Socket {
-    int in;
-    int out;
+    int in_socket;
+    int out_socket;
 } Socket;
 
 Socket std = {0, 1};
@@ -55,31 +56,31 @@ Socket create_pipe()
 
 void replace_socket(Socket sckt)
 {
-    if (sckt.in != 0) {
+    if (sckt.in_socket != 0) {
         close(0);
-        dup(sckt.in);
-        close(sckt.in);
+        dup(sckt.in_socket);
+        close(sckt.in_socket);
     }
-    if (sckt.out != 1) {
+    if (sckt.out_socket != 1) {
         close(1);
-        dup(sckt.out);
-        close(sckt.out);
+        dup(sckt.out_socket);
+        close(sckt.out_socket);
     }
 }
 
 void close_socket(Socket sckt, Socket reserve)
 {
-    if (sckt.in != reserve.in && sckt.in != 0) {
-        close(sckt.in);
+    if (sckt.in_socket != reserve.in_socket && sckt.in_socket != 0) {
+        close(sckt.in_socket);
     }
-    if (sckt.out != reserve.out && sckt.in != 1) {
-        close(sckt.out);
+    if (sckt.out_socket != reserve.out_socket && sckt.in_socket != 1) {
+        close(sckt.out_socket);
     }
 }
 
 int exec_command(Env * env, Command * cmd, Socket sckt, Socket stream)
 {
-    String * executable = search_exec(env, cmd);
+    String_ * executable = search_exec(env, cmd);
     int status;
     // execute if found any
     if (executable) {
@@ -109,39 +110,39 @@ int exec_command(Env * env, Command * cmd, Socket sckt, Socket stream)
     }
 }
 
-// returns a String if there's an unknown command, else NULL
+// returns a String_ if there's an unknown command, else NULL
 void exec_line(Env * env, Line * line, Socket stream)
 {
-    fprintf(stderr, "streaming [%d, %d]\n", stream.in, stream.out);
+    fprintf(stderr, "streaming [%d, %d]\n", stream.in_socket, stream.out_socket);
 
     if (line -> redirect) {
-        stream.out = open(line -> target -> content, O_WRONLY | O_CREAT, 0777);
+        stream.out_socket = open(line -> target -> content, O_WRONLY | O_CREAT, 0777);
     }
 
     // start bridging pipes;
-    List * cursor = line -> cmds;
-    Socket last_pipe = {stream.in, 1};
+    List_ * cursor = line -> cmds;
+    Socket last_pipe = {stream.in_socket, 1};
     Socket next_pipe = {0, 1};
     Socket sckt;
     while (cursor -> Nil == FALSE) {
         Command * cmd = head(cursor);
         if (length(cursor) == 1) {           // last
-            sckt.in = last_pipe.in;
-            sckt.out = stream.out;          // out
+            sckt.in_socket = last_pipe.in_socket;
+            sckt.out_socket = stream.out_socket;          // out
         } else {
             next_pipe = create_pipe();
-            sckt.in = last_pipe.in;
-            sckt.out = next_pipe.out;
+            sckt.in_socket = last_pipe.in_socket;
+            sckt.out_socket = next_pipe.out_socket;
             last_pipe = next_pipe;
         }
 
         // returns -1 if cannot find command
         int exec_result = exec_command(env, cmd, sckt, stream);
         if (exec_result == -1) {
-            String * unknown = copy_string(cmd -> name);
+            String_ * unknown = copy_string(cmd -> name);
             free_command(cmd);
             if (unknown) {
-                dprintf(stream.out, "Unknown command: [%s].\n", unknown -> content);
+                dprintf(stream.out_socket, "Unknown command: [%s].\n", unknown -> content);
                 break;
             }
         } else {
@@ -164,7 +165,7 @@ void child(int socket)
             free_line(line);
         } else {
             Command * first_command = head(line -> cmds);
-            String * command_name = first_command -> name;
+            String_ * command_name = first_command -> name;
             if (compare_string(string("exit"), command_name)) {
                 free_command(first_command);
                 free_env(env);
@@ -173,32 +174,32 @@ void child(int socket)
                 break;
             } else if (compare_string(string("printenv"), command_name)) {
                 if (arg_length(first_command) == 0) {
-                    String * message = show_all_env(env);
+                    String_ * message = show_all_env(env);
                     send_message(socket, message);
                 } else {
-                    String * key = head(first_command -> args);
-                    String * val = search(env, copy_string(key));
+                    String_ * key = head(first_command -> args);
+                    String_ * val = search(env, copy_string(key));
                     if (val) {
-                        String * message = append_string(val, string("\n"));
+                        String_ * message = append_string(val, string("\n"));
                         free_string(key);
                         send_message(socket, message);
                     } else {
-                        String * message = append_string(key, string("=\n"));
+                        String_ * message = append_string(key, string("=\n"));
                         send_message(socket, message);
                     }
                 }
             } else if (compare_string(string("remove"), command_name)) {
                 if (arg_length(first_command) == 1) {
-                    String * key = head(first_command -> args);
+                    String_ * key = head(first_command -> args);
                     env = remove_env(env, key);
                 } else {
-                    String * message = string("wrong number of arguments for remove\n");
+                    String_ * message = string("wrong number of arguments for remove\n");
                     send_message(socket, message);
                 }
             } else if (compare_string(string("setenv"), command_name)) {
                 if (arg_length(first_command) == 2) {
-                    String * key = trim(head(first_command -> args));
-                    String * val = trim(last(first_command -> args));
+                    String_ * key = trim(head(first_command -> args));
+                    String_ * val = trim(last(first_command -> args));
                     env = insert(env, key, val);
                 } else {
                     send_message(socket, string("ERROR: wrong number of arguments for \"setenv\"\n"));
@@ -217,7 +218,7 @@ void child(int socket)
 
 int main(int argc, char *argv[])
 {
-    create_server(4444, child);
+    // create_server(4444, child);
 
     // Env * env = cons_env(string("PATH"), string("bin:."), nil_env());
     // Line * command0 = parse_line(string("ls -a | number |1"));
@@ -230,7 +231,7 @@ int main(int argc, char *argv[])
     // free_env(env);
 
     // Env * e = cons_env(string("PATH"), string("bin:."), nil_env());
-    // String * commands = string("ls -a | number");
+    // String_ * commands = string("ls -a | number");
     // // for (int i = 0; i < 1000; i++) {
     // //     commands = append_string(commands, string(" | cat | cat"));
     // // }

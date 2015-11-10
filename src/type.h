@@ -9,51 +9,51 @@
 //  Generic boxed data
 ////////////////////////////////////////////////////////////////////////////////
 
-typedef struct Box {
+typedef struct Box_ {
     void * content;
-    void (*destructor)(void *);
+    void (*destruct_or)(void *);
     void * (*copier)(void *);
-    void (*printer)(void *);
-} Box;
+    void (*print_er)(void *);
+} Box_;
 
-Box * box(void *, void (*)(void *), void * (*)(void *), void (*)(void *));
-void * unbox(Box *);
-Box * copy(Box *);
-void destruct(Box *);
-void print(Box *);
+Box_ * box(void *, void (*)(void *), void * (*)(void *), void (*)(void *));
+void * unbox(Box_ *);
+Box_ * copy_(Box_ *);
+void destruct_(Box_ *);
+void print_(Box_ *);
 
 ////////////////////////////////////////////////////////////////////////////////
 //  Pair
 ////////////////////////////////////////////////////////////////////////////////
 
 typedef struct Pair {
-    Box * Fst;
-    Box * Snd;
+    Box_ * Fst;
+    Box_ * Snd;
 } Pair;
 
-Pair * pair(Box *, Box *);
+Pair * pair(Box_ *, Box_ *);
 void * fst(Pair *);
 void * snd(Pair *);
-Pair * copy_pair(Pair *);
+Pair * copy__pair(Pair *);
 void free_pair(Pair *);
-void print_pair(Pair *);
-Box * box_pair(Pair *);
+void print__pair(Pair *);
+Box_ * box_pair(Pair *);
 
 ////////////////////////////////////////////////////////////////////////////////
 //  Either
 ////////////////////////////////////////////////////////////////////////////////
 
 typedef struct Either {
-    Box * Left;
-    Box * Right;
+    Box_ * Left;
+    Box_ * Right;
 } Either;
 
-Either * left(Box *);
-Either * right(Box *);
-Either * copy_either(Either *);
+Either * left(Box_ *);
+Either * right(Box_ *);
+Either * copy__either(Either *);
 void free_either(Either *);
-void print_either(Either *);
-Box * box_either(Either *);
+void print__either(Either *);
+Box_ * box_either(Either *);
 
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -70,51 +70,51 @@ typedef unsigned int Bool;
 
 typedef struct Maybe {
     Bool Nothing;   // TRUE if Nothing, FALSE, if Just
-    Box * Just;
+    Box_ * Just;
 } Maybe;
 
 Maybe * nothing();
-Maybe * just(Box *);
+Maybe * just(Box_ *);
 void * from_just(Maybe *);
 
-Maybe * copy_maybe(Maybe *);
-void print_maybe(Maybe *);
+Maybe * copy__maybe(Maybe *);
+void print__maybe(Maybe *);
 void free_maybe(Maybe *);
-Box * box_maybe(Maybe *);
+Box_ * box_maybe(Maybe *);
 
 ////////////////////////////////////////////////////////////////////////////////
-//  List
+//  List_
 ////////////////////////////////////////////////////////////////////////////////
 
-typedef struct List {
+typedef struct List_ {
     Bool Nil;               //  Nil
-    struct List * Cons;     //  Cons
-    Box * data;             //  Carrier
-} List;
+    struct List_ * Cons;     //  Cons
+    Box_ * data;             //  Carrier
+} List_;
 
-List * nil();
-List * cons(Box *, List *);
-List * snoc(List *, Box *);
-List * copy_list(List *);
+List_ * nil();
+List_ * cons(Box_ *, List_ *);
+List_ * snoc(List_ *, Box_ *);
+List_ * copy__list(List_ *);
 
-void * elemAt(List *, int);
+void * elemAt(List_ *, int);
 
-void * head(List *);
-List * tail(List *);
-List * init(List *);
-void * last(List *);
+void * head(List_ *);
+List_ * tail(List_ *);
+List_ * init(List_ *);
+void * last(List_ *);
 
-List * append(List *, List *);
-List * reverse(List *);
+List_ * append_(List_ *, List_ *);
+List_ * reverse_(List_ *);
 
-List * map(Box *(*)(Box *), List *);
-List * filter(Bool (*)(Box *), List *);
+List_ * map_(Box_ *(*)(Box_ *), List_ *);
+List_ * filter_(Bool (*)(Box_ *), List_ *);
 
-Bool null(List *);
-int length(List *);
+Bool null(List_ *);
+int length(List_ *);
 
-void free_list(List *);
-void print_list(List *);
-Box * box_list(List *);
+void free_list(List_ *);
+void print__list(List_ *);
+Box_ * box_list(List_ *);
 
 #endif // TYPE_H_

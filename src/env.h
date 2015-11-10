@@ -10,22 +10,22 @@
 
 typedef struct Env {
     Bool Nil;
-    String * key;
-    String * val;
+    String_ * key;
+    String_ * val;
     struct Env * Cons;
 } Env;
 
 // constructor
 Env * nil_env();
-Env * cons_env(String *, String *, Env *);
+Env * cons_env(String_ *, String_ *, Env *);
 Env * copy_env(Env *);
 
 // operation
-Env * insert(Env *, String *, String *);
-Env * remove_env(Env *, String *);
-String * search(Env *, String *);
-String * show_all_env(Env *);
-List * get_path(Env *);
+Env * insert(Env *, String_ *, String_ *);
+Env * remove_env(Env *, String_ *);
+String_ * search(Env *, String_ *);
+String_ * show_all_env(Env *);
+List_ * get_path(Env *);
 
 //
 void free_env(Env *);
