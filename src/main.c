@@ -141,7 +141,7 @@ void exec_line(Env * env, Line * line, Socket stream)
             String * unknown = copy_string(cmd -> name);
             free_command(cmd);
             if (unknown) {
-                dprintf(stream.out, "Unknown command: [%s]\n", unknown -> content);
+                dprintf(stream.out, "Unknown command: [%s].\n", unknown -> content);
                 break;
             }
         } else {
