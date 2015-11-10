@@ -1,8 +1,7 @@
 #include "Cello.h"
 #include "parser.h"
-// #include "type.h"
+#include "exec.h"
 #include "network.h"
-// #include "env.h"
 // #include <sys/wait.h>
 // #include <fcntl.h>
 
@@ -61,7 +60,12 @@ var child_process(var args)
                 }
             } else {
                 print_to($(File, stderr), 0, "> %$\n", first_command_name);
-
+                var executable = search_exec(env, first_command_name);
+                if (executable) {
+                    println("%$", executable);
+                } else {
+                    println("Unknown command: [%s].", first_command_name);
+                }
             }
         }
 
