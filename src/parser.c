@@ -4,6 +4,7 @@
 #include "parser.h"
 #include <string.h>
 #include <stdlib.h>
+#include <ctype.h>
 
 static void Line_New(var self, var args) {
     struct Line* line = self;
@@ -24,6 +25,33 @@ var Line = Cello(Line,
   Instance(New,     Line_New, NULL),
   Instance(Show,     Line_Show, NULL)
 );
+
+
+var trim(struct String* input)
+{
+    char * space = malloc(strlen(c_str(input)) + 1);
+    char * buffer = space;
+    strcpy(buffer, c_str(input));
+
+    // Trim leading space
+    while(isspace(*buffer)) buffer++;
+
+    // All spaces?
+    if(*buffer == 0) {
+        free(space);
+        return new(String, $S(""));
+    } else {
+        //  Trim trailing space
+        char * end = buffer + strlen(buffer) - 1;
+        while(end > buffer && isspace(*end)) end--;
+
+        // Write new null terminator
+        *(end+1) = 0;
+        var result = new(String, $S(buffer));
+        free(space);
+        return result;
+    }
+}
 
 var substring(struct String* input, int from, int to)
 {
@@ -67,21 +95,21 @@ var tokenize(struct String* input, struct String* sep)
 
 var not_empty_string(var input)
 {
-    return len(input) > 0 ? $I(0) : NULL;
+    return len(trim(input)) > 0 ? $I(0) : NULL;
 }
 
-var compact(struct String* input)
+var rectify(struct String* input)
 {
     var result = new(List, String);
     foreach (token in filter(tokenize(input, $S(" ")), $(Function, not_empty_string))) {
-        push(result, token);
+        push(result, trim(token));
     }
     return result;
 }
 
 var parse_command(struct String* input)
 {
-    return compact(input);
+    return rectify(input);
 }
 
 var parse_redirection(struct List* tokens)
@@ -110,7 +138,8 @@ var parse_body(struct List* tokens)
     var command = new(List, String);
     foreach (token in tokens) {
         if (eq(token, $S("|"))) {
-            push(result, command);
+            if (len(command) > 0)
+                push(result, command);
             command = new(List, String);
         } else {
             push(command, token);
@@ -177,7 +206,8 @@ var parse_socket(struct List* tokens)
 
 var parse_line(struct String* input)
 {
-    var tokens = compact(input);
+    var tokens = rectify(input);
+
     int tokens_length = len(tokens);
 
     //

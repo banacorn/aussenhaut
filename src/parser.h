@@ -12,6 +12,7 @@ struct Line {
 };
 extern var Line;
 
+var trim(struct String*);
 var substring(struct String*, int, int);
 var tokenize(struct String*, struct String*);
 var compact(struct String*);

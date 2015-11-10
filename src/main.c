@@ -19,23 +19,63 @@ var child_process(var args)
     replace_socket(socket);
 
     // initialize env
-    var env = new(Table, String, List);
-    set(env, $S("PATH"), new(List, String, $S("bin"), $S(".")));
+    var env = new(Table, String, String);
+    set(env, $S("PATH"), new(String, $S("bin:.")));
 
     send_message($S(welcome_msg));
 
     while(1) {
         send_message($S("% "));
         var message = read_message();
-        if (eq(message, $S("exit"))) {
-            break;
-        } else if (eq(message, $S("printenv"))) {
-            print_to($(File, stderr), 0, "%$\n", env);
-        } else {
-            var list = tokenize(message, $S(" "));
-            print_to($(File, stderr), 0, "%$\n", list);
+        struct Line* line = parse_line(message);
+        var commands = line->commands;
+
+        if (len(commands) > 0) {
+            var first_command = head(commands);
+            var first_command_name = head(first_command);
+
+            if (eq(first_command_name, $S("exit"))) {
+                break;
+            } else if (eq(first_command_name, $S("printenv"))) {
+                if (len(first_command) == 1) {  // print all
+                    foreach (key in env) {
+                        println("%s=%s", key, get(env, key));
+                    }
+                } else if (len(first_command) == 2) {  // print specific
+                    var key = get(first_command, $I(1));
+                    if (mem(env, key)) {
+                        println("%s=%s", key, get(env, key));
+                    } else {
+                        println("%s=", key);
+                    }
+                } else {
+                    println("error: wrong number of arguments for 'printenv'");
+                }
+            } else if (eq(first_command_name, $S("setenv"))) {
+                if (len(first_command) == 3) {
+                    var key = get(first_command, $I(1));
+                    var val = get(first_command, $I(2));
+                    set(env, key, val);
+                } else {
+                    println("error: wrong number of arguments for 'setenv'");
+                }
+            } else {
+                print_to($(File, stderr), 0, "> %$\n", first_command_name);
+
+            }
+        }
 
 
+        //
+        // if (eq(message, $S("exit"))) {
+        //     break;
+        // } else if (eq(message, $S("printenv"))) {
+        //     print_to($(File, stderr), 0, "%$\n", env);
+        // } else {
+        //     var result = parse_line(message);
+        //     print_to($(File, stderr), 0, "%$\n", result);
+        //
+        //
 
             // var first_command = get(list, $I(0));
 
@@ -43,7 +83,6 @@ var child_process(var args)
 
 
             // print_to($(File, stderr), 0, "> %$\n", message);
-        }
     }
 
     return NULL;
@@ -53,15 +92,13 @@ var child_process(var args)
 
 int main(int argc, char *argv[])
 {
-    // create_server($I(4444), $(Function, child_process));
-    // println("%$", tokenize($S("hey | you  | bitch"), $S(" | ")));
-    // printf("%s\n", c_str(s));
+    create_server($I(4444), $(Function, child_process));
 
-    println("%$", parse_line($S("ls -a sdf | hey wef asd |123")));
-    println("%$", parse_line($S("ls -a sdf | hey wef asd !123")));
-    println("%$", parse_line($S("ls -a sdf | hey wef asd |123 !435")));
-    println("%$", parse_line($S("ls -a sdf | hey wef asd > gasdg")));
-    println("%$", parse_line($S("ls -a sdf | hey wef asd ")));
-    println("%$", parse_line($S("ls -a sdf | hey wef asd | 123")));
+    // println("%$", parse_line($S("ls -a sdf | hey wef asd |123")));
+    // println("%$", parse_line($S("ls -a sdf | hey wef asd !123")));
+    // println("%$", parse_line($S("ls -a sdf | hey wef asd |123 !435")));
+    // println("%$", parse_line($S("ls -a sdf | hey wef asd > gasdg")));
+    // println("%$", parse_line($S("ls -a sdf | hey wef asd ")));
+    // println("%$", parse_line($S("ls -a sdf | hey wef asd | 123")));
     return 0;
 }
