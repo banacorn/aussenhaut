@@ -57,8 +57,11 @@ int main(int argc, char *argv[])
     // println("%$", tokenize($S("hey | you  | bitch"), $S(" | ")));
     // printf("%s\n", c_str(s));
 
-    var result = parse_line($S("ls -a sdf > hey"));
-    // var result = drop(tokenize($S("hey | you  | bitch"), $S(" | ")), -10);
-    println("%$", result);
+    println("%$", parse_line($S("ls -a sdf | hey wef asd |123")));
+    println("%$", parse_line($S("ls -a sdf | hey wef asd !123")));
+    println("%$", parse_line($S("ls -a sdf | hey wef asd |123 !435")));
+    println("%$", parse_line($S("ls -a sdf | hey wef asd > gasdg")));
+    println("%$", parse_line($S("ls -a sdf | hey wef asd ")));
+    println("%$", parse_line($S("ls -a sdf | hey wef asd | 123")));
     return 0;
 }

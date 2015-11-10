@@ -3,6 +3,7 @@
 #include "violin.h"
 #include "parser.h"
 #include <string.h>
+#include <stdlib.h>
 
 static void Line_New(var self, var args) {
     struct Line* line = self;
@@ -103,38 +104,87 @@ var parse_redirection(struct List* tokens)
         return NULL;
     }
 }
+var parse_body(struct List* tokens)
+{
+    var result = new(List, List);
+    var command = new(List, String);
+    foreach (token in tokens) {
+        if (eq(token, $S("|"))) {
+            push(result, command);
+            command = new(List, String);
+        } else {
+            push(command, token);
+        }
+    }
+    push(result, command);  // the rest
+
+    return result;
+}
+
+var parse_pipe(struct String* input)
+{
+    char *ref = c_str(input);
+    if (ref[0] == '|') {
+        return new(Int, $I(atoi(ref + 1)));
+    } else {
+        return NULL;
+    }
+}
+
+var parse_bang(struct String* input)
+{
+    char *ref = c_str(input);
+    if (ref[0] == '!') {
+        return new(Int, $I(atoi(ref + 1)));
+    } else {
+        return NULL;
+    }
+}
 
 var parse_socket(struct List* tokens)
 {
-    // if (len(tokens) == 0) {
-    //     return NULL;
-    // }
-    //
-    // bool second_last, redirected = false;
-    // int i = 0;
-    // foreach (token in tokens) {
-    //     second_last = i == (len(tokens) - 2);
-    //     redirected = redirected || (eq(token, $S(">")) && second_last);
-    //     i++;
-    // }
-    //
-    // if (redirected) {
-    //     return get(tokens, $I(len(tokens) - 1));
-    // } else {
-    //     return NULL;
-    // }
-    return NULL;
+    int tokens_length = len(tokens);
+    if (tokens_length == 0) {
+        return NULL;
+    }
+
+    // last
+    var last_token = get(tokens, $I(tokens_length - 1));
+    var sout = parse_pipe(last_token);
+    var serr = parse_bang(last_token);
+    if (sout) {
+        if (tokens_length >= 2) {
+            var last_second = get(tokens, $I(tokens_length - 2));
+            serr = parse_bang(last_second);
+        }
+
+    } else if (serr) {
+        if (tokens_length >= 2) {
+            var last_second = get(tokens, $I(tokens_length - 2));
+            sout = parse_pipe(last_second);
+        }
+    }
+    if (sout && serr)
+        return new(Socket, $I(-1), sout, serr);
+    if (sout) {
+        return new(Socket, $I(-1), sout, $I(-1));
+    }
+    if (serr)
+        return new(Socket, $I(-1), $I(-1), serr);
+
+    return new(Socket, $I(-1), $I(-1), $I(-1));
 }
 
 var parse_line(struct String* input)
 {
     var tokens = compact(input);
+    int tokens_length = len(tokens);
 
     //
     //  empty line
     //
-    if (len(tokens) == 0) {
-        return new(Line, new(List, String), new(String, $S("")), new(Socket, NULL, NULL, NULL));
+    if (tokens_length == 0) {
+        return new(Line, new(List, List), new(String, $S("")), new(Socket, $I(-1), $I(-1), $I(-1)));
     }
 
     //
@@ -142,37 +192,18 @@ var parse_line(struct String* input)
     //
     var redirection = parse_redirection(tokens);
     if (redirection) {
-        return new(Line, new(List, String), redirection, new(Socket, NULL, NULL, NULL));
+        var body = parse_body(take(tokens, tokens_length - 2));
+        return new(Line, body, redirection, new(Socket, $I(-1), $I(-1), $I(-1)));
     }
 
     //
     //  socket "|N !N"
     //
-    // var socket = parse_socket(tokens);
-    // if (socket) {
-        return new(Line, new(List, String), redirection, new(Socket, NULL, NULL, NULL));
-    // }
+    struct Socket* socket = parse_socket(tokens);
+    int count = 0;  // count how much to be parsed as command body
+    if (socket->sout != -1) count++;
+    if (socket->serr != -1) count++;
+    var body = parse_body(take(tokens, tokens_length - count));
+    return new(Line, body, new(String, $S("")), socket);
 
-
-
-
-    // else {
-    // return new(Line, new(List, String), new(String, $S("")), socket);
-    //
-    // }
-    //
-    //  redirection ">"
-    //
-    // bool second_last, redirected = false;
-    // int i = 0;
-    // var redirection;
-    // foreach (token in tokens) {
-    //     second_last = i == (len(tokens) - 2);
-    //     redirected = redirected || (eq(token, $S(">")) && second_last);
-    //     i++;
-    // }
-
-    // var socket = new(Socket, NULL, NULL, NULL);
-    // var commands = new(List, String);
-    // return new(Line, commands, redirection, socket);
 }
