@@ -15,12 +15,8 @@ struct Socket {
 extern var Socket;
 
 var read_message();
-// var read_message(struct Socket*);
 void send_message(var);
-// void send_message(struct Socket*, var);
-
-// String_ * read_message(int );
-// void send_message(int, String_ *);
 void create_server(struct Int*, struct Function*);
+var replace_socket(struct Socket*);
 
 #endif // NETWORK_H_

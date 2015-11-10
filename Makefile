@@ -3,7 +3,7 @@ CFLAGS=-Wall -g
 go:
 	@ make clean
 	@ mkdir -p bin
-	@ cc src/main.c src/network.c -Lbuild -lCello -o bin/main
+	@ cc src/main.c src/violin.c src/network.c src/parser.c -Lbuild -lCello -o bin/main
 	@ # @ cc src/main.c src/type.c src/string.c src/parser.c src/net.c src/env.c -Lbuild -lCello -o bin/main
 	@ ./bin/main
 

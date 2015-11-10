@@ -2,8 +2,16 @@
 #include "Cello.h"
 #include "network.h"
 #include <unistd.h>
+#include <string.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+
+static void Socket_New(var self, var args) {
+    struct Socket* socket = self;
+    socket->sin  = get(args, $I(0)) ? c_int(get(args, $I(0))) : 0;
+    socket->sout = get(args, $I(1)) ? c_int(get(args, $I(1))) : 1;
+    socket->serr = get(args, $I(2)) ? c_int(get(args, $I(2))) : 2;
+}
 
 static int Socket_Show(var self, var output, int pos) {
     struct Socket* socket = self;
@@ -13,6 +21,7 @@ static int Socket_Show(var self, var output, int pos) {
 }
 
 var Socket = Cello(Socket,
+    Instance(New, Socket_New, NULL),
     Instance(Show, Socket_Show, NULL));
 
 var read_message()
@@ -26,8 +35,12 @@ var read_message()
             perror("recv error");
             return $S("");
         } else {
+            // null terminate the buffer first
+            buffer[offset + recv_result] = 0;
+
             if (buffer[offset + recv_result - 1] == '\n') { // newline, end of command
-                buffer[offset + recv_result] = 0;
+                buffer[offset + recv_result - 1] = 0;
+                if (buffer[offset + recv_result - 2]  == '\r') buffer[offset + recv_result - 2] = 0;
                 return $S(buffer);
             } else {
                 offset += recv_result;
@@ -109,4 +122,36 @@ void create_server(struct Int* port_number, struct Function* child_process)
     }
 
     close(socket_fd);
+}
+
+
+var replace_socket(struct Socket* socket)
+{
+    // replace STDIN 0
+    if (socket->sin != 0) {
+        println("directing STDIN 0 => %$", $I(socket->sin));
+        close(0);
+        if (dup(socket->sin) < 0)
+            perror("error stdin dup");
+        close(socket->sin);
+    }
+
+    // replace STDOUT 1
+    if (socket->sout != 1) {
+        println("directing STDOUT 1 => %$", $I(socket->sout));
+        close(1);
+        if (dup(socket->sout) < 0)
+            perror("error stdout dup");
+        close(socket->sout);
+    }
+
+    // replace STDERR 2
+    if (socket->serr != 2) {
+        println("directing STDERR 2 => %$", $I(socket->serr));
+        close(2);
+        if (dup(socket->serr) < 0)
+            perror("error stderr dup");
+        close(socket->serr);
+    }
+    return NULL;
 }
