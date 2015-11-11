@@ -2,8 +2,6 @@
 #include "parser.h"
 #include "exec.h"
 #include "network.h"
-// #include <sys/wait.h>
-// #include <fcntl.h>
 
 
 char * welcome_msg =
@@ -15,6 +13,10 @@ var child_process(var args)
 {
     // get sockets plugged
     struct Socket* socket = get(args, $I(0));
+
+    // flush the bloody buffer, fuck knows why
+    print("\n");
+
     replace_socket(socket);
 
     // initialize env
@@ -59,13 +61,15 @@ var child_process(var args)
                     println("error: wrong number of arguments for 'setenv'");
                 }
             } else {
-                print_to($(File, stderr), 0, "> %$\n", first_command_name);
-                var executable = search_exec(env, first_command_name);
-                if (executable) {
-                    println("%$", executable);
-                } else {
-                    println("Unknown command: [%s].", first_command_name);
-                }
+                // print_to($(File, stderr), 0, "> %$\n", first_command_name);
+                exec_line(env, line, $(Socket, 0, 1, 2));
+                // var executable = search_exec(env, first_command_name);
+                // if (executable) {
+                //     exec_command(env, first_command, new(Socket, NULL, NULL, NULL));
+                //
+                // } else {
+                //     println("Unknown command: [%s].", first_command_name);
+                // }
             }
         }
 
@@ -97,6 +101,10 @@ var child_process(var args)
 int main(int argc, char *argv[])
 {
     create_server($I(4444), $(Function, child_process));
+    // var command = new(List, String, $S("lssdfs dfsdf"), $S("-sdfs dfsdfsfsfsfsdfa"));
+    // var executable = $S("asdfasdfas");
+    // char ** space = clone_char_array(command, executable);
+    // free_command_char_array(command, space);
 
     // println("%$", parse_line($S("ls -a sdf | hey wef asd |123")));
     // println("%$", parse_line($S("ls -a sdf | hey wef asd !123")));

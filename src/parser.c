@@ -62,7 +62,8 @@ var substring(struct String* input, int from, int to)
     } else if (to > len(input)) {
         return new(String, $S(""));
     } else {
-        char * buffer = malloc(to - from);
+        char * buffer = malloc(to - from + 1);
+        buffer[to - from] = 0;
         strncpy(buffer, c_str(input) + from, to - from);
         var result = new(String, $S(buffer));
         free(buffer);
@@ -89,6 +90,7 @@ var tokenize(struct String* input, struct String* sep)
         }
         var rest = substring(input, cursor_old, len(input));
         push(result, rest);
+
         return result;
     }
 }

@@ -18,5 +18,7 @@ var read_message();
 void send_message(var);
 void create_server(struct Int*, struct Function*);
 var replace_socket(struct Socket*);
+var create_pipe();
+void close_socket(struct Socket*);
 
 #endif // NETWORK_H_

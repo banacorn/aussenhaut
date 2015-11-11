@@ -129,7 +129,7 @@ var replace_socket(struct Socket* socket)
 {
     // replace STDIN 0
     if (socket->sin != 0) {
-        println("directing STDIN 0 => %$", $I(socket->sin));
+        // print_to($(File, stderr), 0, "0 => %$\n", $I(socket->sin));
         close(0);
         if (dup(socket->sin) < 0)
             perror("error stdin dup");
@@ -138,7 +138,7 @@ var replace_socket(struct Socket* socket)
 
     // replace STDOUT 1
     if (socket->sout != 1) {
-        println("directing STDOUT 1 => %$", $I(socket->sout));
+        // print_to($(File, stderr), 0, "1 => %$\n", $I(socket->sout));
         close(1);
         if (dup(socket->sout) < 0)
             perror("error stdout dup");
@@ -147,11 +147,44 @@ var replace_socket(struct Socket* socket)
 
     // replace STDERR 2
     if (socket->serr != 2) {
-        println("directing STDERR 2 => %$", $I(socket->serr));
+        // print_to($(File, stderr), 0, "2 => %$\n", $I(socket->serr));
         close(2);
         if (dup(socket->serr) < 0)
             perror("error stderr dup");
         close(socket->serr);
     }
     return NULL;
+}
+
+void close_socket(struct Socket* socket)
+{
+    // close socket IN
+    if (socket->sin != 0) {
+        // print_to($(File, stderr), 0, "%$ => X\n", $I(socket->sin));
+        close(socket->sin);
+    }
+
+    // close socket OUT
+    if (socket->sout != 1) {
+        // print_to($(File, stderr), 0, "%$ => X\n", $I(socket->sout));
+        close(socket->sout);
+    }
+
+    // close socket ERR
+    if (socket->serr != 2) {
+        // print_to($(File, stderr), 0, "%$ => X\n", $I(socket->serr));
+        close(socket->serr);
+    }
+}
+
+var create_pipe()
+{
+    int fds[2];
+    if (pipe(fds) == -1) {
+        perror("pipe");
+        return NULL;
+    } else {
+        // print_to($(File, stderr), 0, "creating %$\n", $(Socket, fds[0], fds[1], 2));
+        return new(Socket, $I(fds[0]), $I(fds[1]), $I(2));
+    }
 }
