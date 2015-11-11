@@ -22,6 +22,7 @@ check:
 
 cello:
 	@ rm -rf Cello
+	@ mkdir -p build
 	@ git clone https://github.com/orangeduck/Cello.git
 	@ cd Cello && make
 	@ cp Cello/libCello.a build
