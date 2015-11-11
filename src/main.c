@@ -11,28 +11,28 @@ char * welcome_msg =
 
 
 // decrease indices and close some sockets
-var shift_pool(var pool)
+var shift_table(var table)
 {
-    var new_pool = new(Table, Int, Socket);
-    foreach (index in pool) {
+    var new_table = new(Table, Int, Socket);
+    foreach (index in table) {
         int i = c_int(index);
-        var pipe = get(pool, index);    // get
+        var pipe = get(table, index);    // get
         if (pipe) {
             if (i <= 0) {                   // too old
                 close_socket(pipe);
             } else {
-                set(new_pool, $I(i - 1), pipe);   // set
+                set(new_table, $I(i - 1), pipe);   // set
             }
         }
     }
 
-    return new_pool;
+    return new_table;
 }
 
-var incoming_pipe(var pool)
+var incoming_pipe(var table)
 {
-    if (mem(pool, $I(0)))
-        return get(pool, $I(0));
+    if (mem(table, $I(0)))
+        return get(table, $I(0));
     else
         return NULL;
 }
@@ -52,10 +52,11 @@ var child_process(var args)
     var env = new(Table, String, String);
     set(env, $S("PATH"), new(String, $S("bin:.")));
 
-    // initialize pipe pool
-    var pool = new(Table, Int, Socket);
-    var duplicated_pipes_out = new(List, Int);
-    var duplicated_pipes_in = new(List, Int);
+    // initialize pipe table
+    var table = new(Table, Int, Socket);
+    var yidam = new(Table, Int, Int);
+    // var duplicated_pipes = new(List, Int);
+    // var duplicated_pipes_in = new(List, Int);
 
     send_message($S(welcome_msg));
 
@@ -96,76 +97,60 @@ var child_process(var args)
                 }
             } else {
                 int line_result;
+                int to_close = -1;
                 int sin = 0;
                 int sout = 1;
                 int serr = 2;
 
+                // check incoming pipes
+                struct Socket *incoming = incoming_pipe(table);
+                if (incoming) {
+                    print_to(err, 0, ">>> incoming pipe pending %$\n", incoming);
+                    sin = incoming->sin;
+                    to_close = incoming->sout;
+                } else {
+                    sin = 0;
+                }
 
                 // check outgoing pipes
                 if (line->socket->sout > 0) {
                     var out_index = $I(line->socket->sout);
-                    struct Socket *outgoing = mem(pool, out_index) ? get(pool, out_index) : NULL;
+                    struct Socket *outgoing = mem(table, out_index) ? get(table, out_index) : NULL;
                     if (outgoing) {
                         print_to(err, 0, ">>> %$ already existed %$\n", out_index, outgoing);
-                        push(duplicated_pipes_out, $I(outgoing->sout));
                         int new_sout = dup(outgoing->sout);
                         if (new_sout == -1)
                             perror("duplicating existing sout");
                         sout = new_sout;
-                        // sout = outgoing->sout;
                     } else {
                         outgoing = create_pipe();
-                        set(pool, out_index, outgoing);
-                        print_to(err, 0, ">>> %$ doesn't exists yet, creating %$\n", out_index, outgoing);
-                        push(duplicated_pipes_out, $I(outgoing->sout));
+                        set(table, out_index, outgoing);
+                        // print_to(err, 0, ">>> %$ doesn't exists yet, creating %$\n", out_index, outgoing);
                         int new_sout = dup(outgoing->sout);
                         if (new_sout == -1)
                             perror("duplicating new sout");
                         sout = new_sout;
-                        // sout = outgoing->sout;
                     }
                 } else {
                     sout = 1;
                 }
 
 
-                // check incoming pipes
-                struct Socket *incoming = incoming_pipe(pool);
-                if (incoming) {
-                    print_to(err, 0, ">>> incoming pipe pending %$\n", incoming);
-
-                    // push(duplicated_pipes_in, $I(incoming->sin));
-                    // int new_sin = dup(incoming->sin);
-                    // if (new_sin == -1)
-                    //     perror("duplicating existing sin");
-                    // sout = new_sin;
-                    // sin = incoming->sin;
-                    sin = incoming->sin;
-
-                    foreach (x in duplicated_pipes_out) {
-                        close(c_int(x));
-                    }
-                    resize(duplicated_pipes_out, 0);
-
-                } else {
-                    sin = 0;
-                }
 
                 struct Socket *pipe = $(Socket, sin, sout, serr);
 
-                line_result = exec_line(env, line, pipe);
-                if (line_result != -1) {
-                    close_socket(pipe);
-                    assign(pool, shift_pool(pool));
-                    print_to(err, 0, "out %$\n", duplicated_pipes_out);
-                    print_to(err, 0, "in  %$\n", duplicated_pipes_in);
-                    // print_to(err, 0, "new %$\n", pool);
-                    print_to(err, 0, "\n\n\n");
-                } else {
-                    print_to(err, 0, "\n\n\n");
 
+                if (to_close != -1) {
+                    close(to_close);
+                    to_close = -1;
                 }
 
+                line_result = exec_line(env, line, pipe);
+
+                if (line_result != -1) {
+                    close_socket(pipe);
+                    assign(table, shift_table(table));
+                }
             }
         }
 

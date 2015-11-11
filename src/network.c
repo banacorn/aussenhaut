@@ -136,7 +136,7 @@ var replace_socket(struct Socket* socket)
 {
     // replace STDIN 0
     if (socket->sin != 0) {
-        print_to($(File, stderr), 0, "==> %$\n", $I(socket->sin));
+        // print_to($(File, stderr), 0, "==> %$\n", $I(socket->sin));
         close(0);
         if (dup(socket->sin) < 0)
             fprintf(stderr, "%s %d: %s\n", "replace dup stdin", socket->sin , strerror(errno));
@@ -145,7 +145,7 @@ var replace_socket(struct Socket* socket)
 
     // replace STDOUT 1
     if (socket->sout != 1) {
-        print_to($(File, stderr), 0, "%$ ==>\n", $I(socket->sout));
+        // print_to($(File, stderr), 0, "%$ ==>\n", $I(socket->sout));
         close(1);
         if (dup(socket->sout) < 0) {
             fprintf(stderr, "%s %d: %s\n", "replace dup stdout", socket->sout , strerror(errno));
@@ -155,7 +155,7 @@ var replace_socket(struct Socket* socket)
 
     // replace STDERR 2
     if (socket->serr != 2) {
-        print_to($(File, stderr), 0, "== %$ ==>\n", $I(socket->serr));
+        // print_to($(File, stderr), 0, "== %$ ==>\n", $I(socket->serr));
         close(2);
         if (dup(socket->serr) < 0)
             fprintf(stderr, "%s %d: %s\n", "replace dup stderr", socket->serr , strerror(errno));
@@ -168,19 +168,19 @@ void close_socket(struct Socket* socket)
 {
     // close socket IN
     if (socket->sin != 0) {
-        print_to($(File, stderr), 0, "=/=> %$\n", $I(socket->sin));
+        // print_to($(File, stderr), 0, "=/=> %$\n", $I(socket->sin));
         close(socket->sin);
     }
 
     // close socket OUT
     if (socket->sout != 1) {
-        print_to($(File, stderr), 0, "%$ =/=>\n", $I(socket->sout));
+        // print_to($(File, stderr), 0, "%$ =/=>\n", $I(socket->sout));
         close(socket->sout);
     }
 
     // close socket ERR
     if (socket->serr != 2) {
-        print_to($(File, stderr), 0, "=/ %$ /=>\n", $I(socket->serr));
+        // print_to($(File, stderr), 0, "=/ %$ /=>\n", $I(socket->serr));
         close(socket->serr);
     }
 }
