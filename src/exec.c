@@ -8,7 +8,6 @@
 var env_path(var env)
 {
     if (mem(env, $S("PATH"))) {
-        // print_to($(File, stderr), 0, " %$\n", tokenize( get(env, $S("PATH")), $S(":")));
         return tokenize(get(env, $S("PATH")), $S(":"));
     } else {
         perror("no PATH in env");
@@ -20,10 +19,10 @@ var env_path(var env)
 var search_exec(var env, var name)
 {
     var prefixes = env_path(env);
-    // print_to($(File, stderr), 0, "> %$\n", prefixes);
 
     foreach (prefix in prefixes) {
-        var x = new(String, $S("ras/"));
+        var x = new(String);
+        // var x = new(String, $S("ras/"));
         concat(x, prefix);
         concat(x, $S("/"));
         concat(x, name);
