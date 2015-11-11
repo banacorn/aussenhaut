@@ -3,6 +3,8 @@
 
 #include <sys/wait.h>
 #include <fcntl.h>
+
+
 var env_path(var env)
 {
     if (mem(env, $S("PATH"))) {
@@ -81,8 +83,6 @@ int exec_command(var env, var command, var socket)
         return -1;
     }
 
-    // print_to($(File, stderr), 0, "%$ %$\n", head(command), socket);
-
     pid_t pid = fork();
     if (pid == -1) {
         perror("exec fork error");
@@ -104,14 +104,19 @@ int exec_command(var env, var command, var socket)
 
 }
 
-void exec_line(var env, struct Line* line, struct Socket* socket)
+int exec_line(var env, struct Line* line, struct Socket* socket)
 {
-    replace_socket(socket);
+    int status = 0;
+    // print_to($(File, stderr), 0, "error\n");
+    // replace_socket(socket);
+    // print_to($(File, stderr), 0, "error after\n");
+
+    if (len(line->redirection)) {
+        socket->sout = open(c_str(line->redirection), O_WRONLY | O_CREAT, 0777);
+    }
 
     var commands = line->commands;
-
     struct Socket *bridge_in, *bridge_out;
-
     int i = 0;
     foreach (command in commands) {
         bool is_first = i == 0;
@@ -132,10 +137,13 @@ void exec_line(var env, struct Line* line, struct Socket* socket)
         int exec_result = exec_command(env, command, $(Socket, bridge_in->sin, bridge_out->sout, 2));
         if (exec_result == -1) {
             println("Unknown command: [%s].", head(command));
+            if (is_first)
+                status = -1;
             break;
         }
 
         bridge_in = bridge_out;
         i++;
     }
+    return status;
 }

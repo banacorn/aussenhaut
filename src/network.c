@@ -16,8 +16,8 @@ static void Socket_New(var self, var args) {
 static int Socket_Show(var self, var output, int pos) {
     struct Socket* socket = self;
     return print_to(output, pos,
-        "[ in %d, out %d, err %d ]",
-        $I(socket -> sin), $I(socket -> sout), $I(socket -> serr));
+        "[ %d === %d ===> %d ]",
+        $I(socket -> sout), $I(socket -> serr), $I(socket -> sin));
 }
 
 var Socket = Cello(Socket,
@@ -63,6 +63,8 @@ void send_message(var message_)
 
 void create_server(struct Int* port_number, struct Function* child_process)
 {
+    var err = $(File, fdopen(dup(2), "w"));
+
     struct sockaddr_in server_address;
     struct sockaddr_in client_address;
 
@@ -100,6 +102,7 @@ void create_server(struct Int* port_number, struct Function* child_process)
         socklen_t client_length = sizeof(client_address);
         int client_socket_fd_in = accept(socket_fd, (struct sockaddr *) &client_address, &client_length);
         int client_socket_fd_out = dup(client_socket_fd_in);
+        int client_socket_fd_err = dup(client_socket_fd_in);
         if (client_socket_fd_in < 0) {
             perror("accepting socket");
         }
@@ -113,11 +116,15 @@ void create_server(struct Int* port_number, struct Function* child_process)
             perror("fork error");
         } else if (child_pid == 0) {    //  child process
             close(socket_fd);
-            call(child_process, $(Socket, client_socket_fd_in, client_socket_fd_out, 2));
+            call(child_process,
+                $(Socket, client_socket_fd_in, client_socket_fd_out, client_socket_fd_err),
+                err // custom stderr
+            );
             exit(EXIT_SUCCESS);
         } else {                        //  parent process
             close(client_socket_fd_in);
             close(client_socket_fd_out);
+            close(client_socket_fd_err);
         }
     }
 
@@ -129,28 +136,29 @@ var replace_socket(struct Socket* socket)
 {
     // replace STDIN 0
     if (socket->sin != 0) {
-        // print_to($(File, stderr), 0, "0 => %$\n", $I(socket->sin));
+        print_to($(File, stderr), 0, "==> %$\n", $I(socket->sin));
         close(0);
         if (dup(socket->sin) < 0)
-            perror("error stdin dup");
+            fprintf(stderr, "%s %d: %s\n", "replace dup stdin", socket->sin , strerror(errno));
         close(socket->sin);
     }
 
     // replace STDOUT 1
     if (socket->sout != 1) {
-        // print_to($(File, stderr), 0, "1 => %$\n", $I(socket->sout));
+        print_to($(File, stderr), 0, "%$ ==>\n", $I(socket->sout));
         close(1);
-        if (dup(socket->sout) < 0)
-            perror("error stdout dup");
+        if (dup(socket->sout) < 0) {
+            fprintf(stderr, "%s %d: %s\n", "replace dup stdout", socket->sout , strerror(errno));
+        }
         close(socket->sout);
     }
 
     // replace STDERR 2
     if (socket->serr != 2) {
-        // print_to($(File, stderr), 0, "2 => %$\n", $I(socket->serr));
+        print_to($(File, stderr), 0, "== %$ ==>\n", $I(socket->serr));
         close(2);
         if (dup(socket->serr) < 0)
-            perror("error stderr dup");
+            fprintf(stderr, "%s %d: %s\n", "replace dup stderr", socket->serr , strerror(errno));
         close(socket->serr);
     }
     return NULL;
@@ -160,19 +168,19 @@ void close_socket(struct Socket* socket)
 {
     // close socket IN
     if (socket->sin != 0) {
-        // print_to($(File, stderr), 0, "%$ => X\n", $I(socket->sin));
+        print_to($(File, stderr), 0, "=/=> %$\n", $I(socket->sin));
         close(socket->sin);
     }
 
     // close socket OUT
     if (socket->sout != 1) {
-        // print_to($(File, stderr), 0, "%$ => X\n", $I(socket->sout));
+        print_to($(File, stderr), 0, "%$ =/=>\n", $I(socket->sout));
         close(socket->sout);
     }
 
     // close socket ERR
     if (socket->serr != 2) {
-        // print_to($(File, stderr), 0, "%$ => X\n", $I(socket->serr));
+        print_to($(File, stderr), 0, "=/ %$ /=>\n", $I(socket->serr));
         close(socket->serr);
     }
 }

@@ -9,10 +9,39 @@ char * welcome_msg =
     "** Welcome to the information server. **\n"
     "****************************************\n";
 
+
+// decrease indices and close some sockets
+var shift_pool(var pool)
+{
+    var new_pool = new(Table, Int, Socket);
+    foreach (index in pool) {
+        int i = c_int(index);
+        var pipe = get(pool, index);    // get
+        if (pipe) {
+            if (i <= 0) {                   // too old
+                close_socket(pipe);
+            } else {
+                set(new_pool, $I(i - 1), pipe);   // set
+            }
+        }
+    }
+
+    return new_pool;
+}
+
+var incoming_pipe(var pool)
+{
+    if (mem(pool, $I(0)))
+        return get(pool, $I(0));
+    else
+        return NULL;
+}
+
 var child_process(var args)
 {
     // get sockets plugged
     struct Socket* socket = get(args, $I(0));
+    struct File* err = get(args, $I(1));
 
     // flush the bloody buffer, fuck knows why
     print("\n");
@@ -22,6 +51,11 @@ var child_process(var args)
     // initialize env
     var env = new(Table, String, String);
     set(env, $S("PATH"), new(String, $S("bin:.")));
+
+    // initialize pipe pool
+    var pool = new(Table, Int, Socket);
+    var duplicated_pipes_out = new(List, Int);
+    var duplicated_pipes_in = new(List, Int);
 
     send_message($S(welcome_msg));
 
@@ -61,36 +95,81 @@ var child_process(var args)
                     println("error: wrong number of arguments for 'setenv'");
                 }
             } else {
-                // print_to($(File, stderr), 0, "> %$\n", first_command_name);
-                exec_line(env, line, $(Socket, 0, 1, 2));
-                // var executable = search_exec(env, first_command_name);
-                // if (executable) {
-                //     exec_command(env, first_command, new(Socket, NULL, NULL, NULL));
-                //
-                // } else {
-                //     println("Unknown command: [%s].", first_command_name);
-                // }
+                int line_result;
+                int sin = 0;
+                int sout = 1;
+                int serr = 2;
+
+
+                // check outgoing pipes
+                if (line->socket->sout > 0) {
+                    var out_index = $I(line->socket->sout);
+                    struct Socket *outgoing = mem(pool, out_index) ? get(pool, out_index) : NULL;
+                    if (outgoing) {
+                        print_to(err, 0, ">>> %$ already existed %$\n", out_index, outgoing);
+                        push(duplicated_pipes_out, $I(outgoing->sout));
+                        int new_sout = dup(outgoing->sout);
+                        if (new_sout == -1)
+                            perror("duplicating existing sout");
+                        sout = new_sout;
+                        // sout = outgoing->sout;
+                    } else {
+                        outgoing = create_pipe();
+                        set(pool, out_index, outgoing);
+                        print_to(err, 0, ">>> %$ doesn't exists yet, creating %$\n", out_index, outgoing);
+                        push(duplicated_pipes_out, $I(outgoing->sout));
+                        int new_sout = dup(outgoing->sout);
+                        if (new_sout == -1)
+                            perror("duplicating new sout");
+                        sout = new_sout;
+                        // sout = outgoing->sout;
+                    }
+                } else {
+                    sout = 1;
+                }
+
+
+                // check incoming pipes
+                struct Socket *incoming = incoming_pipe(pool);
+                if (incoming) {
+                    print_to(err, 0, ">>> incoming pipe pending %$\n", incoming);
+
+                    // push(duplicated_pipes_in, $I(incoming->sin));
+                    // int new_sin = dup(incoming->sin);
+                    // if (new_sin == -1)
+                    //     perror("duplicating existing sin");
+                    // sout = new_sin;
+                    // sin = incoming->sin;
+                    sin = incoming->sin;
+
+                    foreach (x in duplicated_pipes_out) {
+                        close(c_int(x));
+                    }
+                    resize(duplicated_pipes_out, 0);
+
+                } else {
+                    sin = 0;
+                }
+
+                struct Socket *pipe = $(Socket, sin, sout, serr);
+
+                line_result = exec_line(env, line, pipe);
+                if (line_result != -1) {
+                    close_socket(pipe);
+                    assign(pool, shift_pool(pool));
+                    print_to(err, 0, "out %$\n", duplicated_pipes_out);
+                    print_to(err, 0, "in  %$\n", duplicated_pipes_in);
+                    // print_to(err, 0, "new %$\n", pool);
+                    print_to(err, 0, "\n\n\n");
+                } else {
+                    print_to(err, 0, "\n\n\n");
+
+                }
+
             }
         }
 
 
-        //
-        // if (eq(message, $S("exit"))) {
-        //     break;
-        // } else if (eq(message, $S("printenv"))) {
-        //     print_to($(File, stderr), 0, "%$\n", env);
-        // } else {
-        //     var result = parse_line(message);
-        //     print_to($(File, stderr), 0, "%$\n", result);
-        //
-        //
-
-            // var first_command = get(list, $I(0));
-
-
-
-
-            // print_to($(File, stderr), 0, "> %$\n", message);
     }
 
     return NULL;
@@ -101,6 +180,52 @@ var child_process(var args)
 int main(int argc, char *argv[])
 {
     create_server($I(4444), $(Function, child_process));
+
+    // struct Socket *p = create_pipe();
+    // println("creating socket: %$", p);
+    //
+    //
+    // char *test = "hey";
+    // dprintf(p->sout, "hey\n");
+    // // write(p->sout, test, strlen(test) + 1);
+    //
+    // // printf("%d\n", p->sin);
+    // // fdopen(p->sout, "r");
+    // // var sout = $(File, fdopen(p->sout, "w"));
+    // // var message = $S("fuck you");
+    // // swrite(sout, message, len(message) + 1);
+    // // sflush(sout);
+    //
+    // // write(p->sout, test, strlen(test) + 1);
+    // // var sout = $(File, fdopen(p->sout, "r"));
+    // // print_to(sin, 0, "fuck you\n");
+    //
+    // // println("creating socket: %$", (sin));
+    // // println("creating socket: %$", $I(seof(sout)));
+    //
+    // // puts("stuck");
+    //
+    //
+    // // IO
+    // var sin = $(File, fdopen(p->sin, "r"));
+    // char buffer[1024];
+    // int result = sread(sin, buffer, sizeof(buffer));
+    // if (result == -1) perror("??");
+    // printf("%d\n", result);
+    // printf("%s\n", buffer);
+    //
+
+    //
+    // // IO
+    // char buffer[1024];
+    // int result = read(p->sin, buffer, sizeof(buffer));
+    // if (result == -1) perror("??");
+    // printf("%d\n", result);
+    // printf("%s\n", buffer);
+
+    // close_socket(p);
+
+    // create_server($I(4444), $(Function, child_process));
     // var command = new(List, String, $S("lssdfs dfsdf"), $S("-sdfs dfsdfsfsfsfsdfa"));
     // var executable = $S("asdfasdfas");
     // char ** space = clone_char_array(command, executable);
