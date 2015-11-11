@@ -1,20 +1,32 @@
 CFLAGS=-Wall -g
 
-.PHONY: build
+.PHONY: build cello test
 
 build:
 	@ make clean
 	@ mkdir -p bin
-	@ cc src/main.c src/violin.c src/exec.c src/network.c src/parser.c -Lbuild -lCello -o bin/main
+	@ make cello
+	@ cc src/main.c src/violin.c src/exec.c src/network.c src/parser.c -Lbuild -lCello -pthread -o bin/main
 
 go:
 	@ make build
+	@ cd ras && ./../bin/main
+
+run:
 	@ cd ras && ./../bin/main
 
 check:
 	@ make build
 	@ ./bin/main
 	@ valgrind --leak-check=full --track-origins=yes ./bin/main
+
+cello:
+	@ rm -rf Cello
+	@ git clone https://github.com/orangeduck/Cello.git
+	@ cd Cello && make
+	@ cp Cello/libCello.a build
+	@ cp Cello/include/Cello.h src
+	@ rm -rf Cello
 
 clean:
 	@ rm -f bin/main
