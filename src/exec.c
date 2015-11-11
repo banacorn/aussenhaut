@@ -107,9 +107,6 @@ int exec_command(var env, var command, var socket)
 int exec_line(var env, struct Line* line, struct Socket* socket)
 {
     int status = 0;
-    // print_to($(File, stderr), 0, "error\n");
-    // replace_socket(socket);
-    // print_to($(File, stderr), 0, "error after\n");
 
     if (len(line->redirection)) {
         socket->sout = open(c_str(line->redirection), O_WRONLY | O_CREAT, 0777);
@@ -134,7 +131,7 @@ int exec_line(var env, struct Line* line, struct Socket* socket)
             bridge_out = create_pipe();
         }
 
-        int exec_result = exec_command(env, command, $(Socket, bridge_in->sin, bridge_out->sout, 2));
+        int exec_result = exec_command(env, command, $(Socket, bridge_in->sin, bridge_out->sout, socket->serr));
         if (exec_result == -1) {
             println("Unknown command: [%s].", head(command));
             if (is_first)
