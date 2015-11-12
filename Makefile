@@ -6,10 +6,11 @@ build:
 	@ make clean
 	@ mkdir -p bin
 	@ make cello
-	@ cc src/main.c src/violin.c src/exec.c src/network.c src/parser.c -Lbuild -lCello -pthread -o bin/main
+	cc src/main.c src/violin.c src/exec.c src/network.c src/parser.c -Lbuild -lCello -pthread -o bin/main
+	@ make setup
 
 go:
-	@ make build
+	@ cc src/main.c src/violin.c src/exec.c src/network.c src/parser.c -Lbuild -lCello -pthread -o bin/main
 	@ cd ras && ./../bin/main
 
 run:
@@ -32,6 +33,7 @@ cello:
 clean:
 	@ rm -f bin/main
 	@ rm -f bin/client
+	@ rm -rf bin
 
 clean-all:
 	@ rm -rf ras
@@ -41,6 +43,7 @@ setup:
 	@ make clean-all
 	@ mkdir -p ras/
 	@ mkdir -p ras/bin
+	@ rm -rf ras/*.txt
 	@ cp /bin/ls ras/bin
 	@ cp /bin/cat ras/bin
 	@ make compile-ras
