@@ -11,14 +11,15 @@ static void Line_New(var self, var args) {
     line->commands = get(args, $I(0));
     line->redirection = get(args, $I(1));
     line->socket = get(args, $I(2));
+    line->ignore = c_int(get(args, $I(3)));
 }
 
 
 static int Line_Show(var self, var output, int pos) {
     struct Line* line = self;
     return print_to(output, pos,
-        "{   commands: %$\n    redirection: %$\n    sockets: %$",
-        line -> commands, line -> redirection, line -> socket);
+        "{   commands: %$\n    redirection: %$\n    sockets: %$\n    ignore: %$",
+        line -> commands, line -> redirection, line -> socket, $I(line -> ignore));
 }
 
 var Line = Cello(Line,
@@ -172,6 +173,16 @@ var parse_bang(struct String* input)
     }
 }
 
+var parse_percent(struct String* input)
+{
+    char *ref = c_str(input);
+    if (ref[0] == '%') {
+        return new(Int, $I(atoi(ref + 1)));
+    } else {
+        return NULL;
+    }
+}
+
 var parse_socket(struct List* tokens)
 {
     int tokens_length = len(tokens);
@@ -216,7 +227,7 @@ var parse_line(struct String* input)
     //  empty line
     //
     if (tokens_length == 0) {
-        return new(Line, new(List, List), new(String, $S("")), new(Socket, $I(-1), $I(-1), $I(-1)));
+        return new(Line, new(List, List), new(String, $S("")), new(Socket, $I(-1), $I(-1), $I(-1)), $I(-1));
     }
 
     //
@@ -225,7 +236,19 @@ var parse_line(struct String* input)
     var redirection = parse_redirection(tokens);
     if (redirection) {
         var body = parse_body(take(tokens, tokens_length - 2));
-        return new(Line, body, redirection, new(Socket, $I(-1), $I(-1), $I(-1)));
+        return new(Line, body, redirection, new(Socket, $I(-1), $I(-1), $I(-1)), $I(-1));
+    }
+
+    //
+    //  ignore "%N"
+    //
+
+    var percent = parse_percent(last(tokens));
+    if (percent) {
+        var body = parse_body(take(tokens, tokens_length - 1));
+        // println("percent: %$", percent);
+        // println("body: %$", body);
+        return new(Line, body, new(String, $S("")), new(Socket, $I(-1), $I(-1), $I(-1)), percent);
     }
 
     //
@@ -236,6 +259,6 @@ var parse_line(struct String* input)
     if (socket->sout != -1) count++;
     if (socket->serr != -1) count++;
     var body = parse_body(take(tokens, tokens_length - count));
-    return new(Line, body, new(String, $S("")), socket);
+    return new(Line, body, new(String, $S("")), socket, $I(-1));
 
 }

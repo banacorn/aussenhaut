@@ -9,6 +9,7 @@ struct Line {
     struct List* commands;
     struct String* redirection;     //  '> somewhere'
     struct Socket* socket;
+    int ignore;
 };
 extern var Line;
 

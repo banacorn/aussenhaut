@@ -4,10 +4,10 @@ CFLAGS=-Wall -g
 
 build:
 	@ make clean
-	@ mkdir -p bin
 	@ make cello
-	cc src/main.c src/violin.c src/exec.c src/network.c src/parser.c -Lbuild -lCello -pthread -o bin/main
+	@ mkdir -p bin
 	@ make setup
+	cc src/main.c src/violin.c src/exec.c src/network.c src/parser.c -Lbuild -lCello -pthread -o bin/main
 
 go:
 	@ cc src/main.c src/violin.c src/exec.c src/network.c src/parser.c -Lbuild -lCello -pthread -o bin/main
@@ -33,14 +33,9 @@ cello:
 clean:
 	@ rm -f bin/main
 	@ rm -f bin/client
-	@ rm -rf bin
-
-clean-all:
-	@ rm -rf ras
-	@ make clean
 
 setup:
-	@ make clean-all
+	@ rm -rf ras
 	@ mkdir -p ras/
 	@ mkdir -p ras/bin
 	@ rm -rf ras/*.txt
@@ -48,6 +43,7 @@ setup:
 	@ cp /bin/cat ras/bin
 	@ make compile-ras
 	@ cp test-src/test.html ras/
+	@ cc test-src/client.c -o bin/client
 
 compile-ras:
 	@ cc src/bin/noop.cpp -o ras/bin/noop

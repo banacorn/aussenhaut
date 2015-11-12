@@ -57,6 +57,7 @@ var child_process(var args)
     var yidam = new(Table, Int, Int);
     // var duplicated_pipes = new(List, Int);
     // var duplicated_pipes_in = new(List, Int);
+    int ignore = 0;
 
     send_message($S(welcome_msg));
 
@@ -65,7 +66,6 @@ var child_process(var args)
         var message = read_message();
         struct Line* line = parse_line(message);
         var commands = line->commands;
-
         if (len(commands) > 0) {
             var first_command = head(commands);
             var first_command_name = head(first_command);
@@ -104,79 +104,90 @@ var child_process(var args)
 
                 // print_to(err, 0, "\n\n %$\n", table);
 
+                if (!ignore) {
 
-                // check incoming pipes
-                struct Socket *incoming = incoming_pipe(table);
-                if (incoming) {
-                    // print_to(err, 0, ">>> incoming pipe pending %$\n", incoming);
-                    sin = incoming->sin;
-                    to_close = incoming->sout;
-                } else {
-                    sin = 0;
-                }
-
-                // check outgoing pipes
-                if (line->socket->sout > 0) {
-                    var out_index = $I(line->socket->sout);
-                    struct Socket *outgoing = mem(table, out_index) ? get(table, out_index) : NULL;
-                    if (outgoing) {
-                        // print_to(err, 0, ">>> %$ already existed %$\n", out_index, outgoing);
-                        int new_sout = dup(outgoing->sout);
-                        if (new_sout == -1)
-                            perror("duplicating existing sout");
-                        sout = new_sout;
+                    // check incoming pipes
+                    struct Socket *incoming = incoming_pipe(table);
+                    if (incoming) {
+                        // print_to(err, 0, ">>> incoming pipe pending %$\n", incoming);
+                        sin = incoming->sin;
+                        to_close = incoming->sout;
                     } else {
-                        outgoing = create_pipe();
-                        set(table, out_index, outgoing);
-                        // print_to(err, 0, ">>> %$ doesn't exists yet, creating %$\n", out_index, outgoing);
-                        int new_sout = dup(outgoing->sout);
-                        if (new_sout == -1)
-                            perror("duplicating new sout");
-                        sout = new_sout;
+                        sin = 0;
                     }
-                } else {
-                    sout = 1;
-                }
 
-
-
-                // check outgoing error pipes
-                if (line->socket->serr > 0) {
-                    var err_index = $I(line->socket->serr);
-                    struct Socket *outgoing = mem(table, err_index) ? get(table, err_index) : NULL;
-                    if (outgoing) {
-                        // print_to(err, 0, ">>> %$ already existed %$\n", err_index, outgoing);
-                        int new_serr = dup(outgoing->sout);
-                        if (new_serr == -1)
-                            perror("duplicating existing serr");
-                        serr = new_serr;
+                    // check outgoing pipes
+                    if (line->socket->sout > 0) {
+                        var out_index = $I(line->socket->sout);
+                        struct Socket *outgoing = mem(table, out_index) ? get(table, out_index) : NULL;
+                        if (outgoing) {
+                            // print_to(err, 0, ">>> %$ already existed %$\n", out_index, outgoing);
+                            int new_sout = dup(outgoing->sout);
+                            if (new_sout == -1)
+                                perror("duplicating existing sout");
+                            sout = new_sout;
+                        } else {
+                            outgoing = create_pipe();
+                            set(table, out_index, outgoing);
+                            // print_to(err, 0, ">>> %$ doesn't exists yet, creating %$\n", out_index, outgoing);
+                            int new_sout = dup(outgoing->sout);
+                            if (new_sout == -1)
+                                perror("duplicating new sout");
+                            sout = new_sout;
+                        }
                     } else {
-                        outgoing = create_pipe();
-                        set(table, err_index, outgoing);
-                        // print_to(err, 0, ">>> %$ doesn't exists yet, creating %$\n", err_index, outgoing);
-                        int new_serr = dup(outgoing->sout);
-                        if (new_serr == -1)
-                            perror("duplicating new serr");
-                        serr = new_serr;
+                        sout = 1;
                     }
+
+
+
+                    // check outgoing error pipes
+                    if (line->socket->serr > 0) {
+                        var err_index = $I(line->socket->serr);
+                        struct Socket *outgoing = mem(table, err_index) ? get(table, err_index) : NULL;
+                        if (outgoing) {
+                            // print_to(err, 0, ">>> %$ already existed %$\n", err_index, outgoing);
+                            int new_serr = dup(outgoing->sout);
+                            if (new_serr == -1)
+                                perror("duplicating existing serr");
+                            serr = new_serr;
+                        } else {
+                            outgoing = create_pipe();
+                            set(table, err_index, outgoing);
+                            // print_to(err, 0, ">>> %$ doesn't exists yet, creating %$\n", err_index, outgoing);
+                            int new_serr = dup(outgoing->sout);
+                            if (new_serr == -1)
+                                perror("duplicating new serr");
+                            serr = new_serr;
+                        }
+                    } else {
+                        serr = 2;
+                    }
+
+                    struct Socket *pipe = $(Socket, sin, sout, serr);
+                    print_to(err, 0, "socket: %$\n", pipe);
+
+
+                    if (to_close != -1) {
+                        close(to_close);
+                        to_close = -1;
+                    }
+
+                    line_result = exec_line(env, line, pipe);
+
+                    if (line_result != -1) {
+                        close_socket(pipe);
+                        assign(table, shift_table(table));
+                    }
+
+
                 } else {
-                    serr = 2;
+                    ignore--;
                 }
 
-                struct Socket *pipe = $(Socket, sin, sout, serr);
-                print_to(err, 0, "socket: %$\n", pipe);
-
-
-                if (to_close != -1) {
-                    close(to_close);
-                    to_close = -1;
-                }
-
-                line_result = exec_line(env, line, pipe);
-
-                if (line_result != -1) {
-                    close_socket(pipe);
-                    assign(table, shift_table(table));
+                // println("ignore: %$", $I(line->ignore));
+                if (line->ignore != -1) {
+                    ignore = line->ignore;
                 }
             }
         }
